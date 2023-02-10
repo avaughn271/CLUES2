@@ -26,61 +26,6 @@ def _logsumexpb(a,b):
     out += a_max
     return out
 
-@njit('float64(float64)',cache=True)
-def _log_phi(z):
-	logphi = -0.5 * np.log(2.0* np.pi) - 0.5 * z * z
-	return logphi
-
-
-@njit('float64[:,:](float64[:,:],float64[:,:])',cache=True)
-def _log_prob_mat_mul(A,B):
-    # multiplication of probability matrices in log space
-    C = np.zeros((A.shape[0],B.shape[1]))
-    for i in range(A.shape[0]):
-        for j in range(B.shape[1]):
-            C[i,j] = _logsumexp( A[i,:] + B[:,j])
-            if np.isnan(C[i,j]):
-                C[i,j] = np.NINF
-        C[i,:] -= _logsumexp(C[i,:])
-    return C
-
-@njit('float64[:,:](float64[:,:],int64)',cache=True)
-def _log_matrix_power(X,n):
-    ## find log of exp(X)^n (pointwise exp()!) 
-
-    # use 18 because you are fucked if you want trans
-    # for dt > 2^18...
-    #print('Calculating matrix powers...')
-
-    maxlog2dt = 18
-    assert(np.log(n)/np.log(2) < maxlog2dt)
-    assert(X.shape[0] == X.shape[1])
-    b = 1
-    k = 0
-    matrices = np.zeros((X.shape[0],X.shape[1],maxlog2dt))
-    matrices[:,:,0] = X
-    
-    while b < n:
-        #print(b,k)
-        k += 1
-        b += 2**k
-        # square the last matrix
-        matrices[:,:,k] = _log_prob_mat_mul(matrices[:,:,k-1],
-                                           matrices[:,:,k-1])
-    leftover = n
-    Y = np.NINF * np.ones((X.shape[0],X.shape[0]))
-    for i in range(X.shape[0]):
-        Y[i,i] = 0
-        
-    while leftover > 0:
-        #print(n-leftover,k)
-        if 2**k <= leftover:
-            Y = _log_prob_mat_mul(Y,matrices[:,:,k])
-            leftover -= 2**k
-        k -= 1
-        
-    return Y
-
 @njit('float64[:](int64,float64,float64,float64[:],float64[:],float64[:],float64[:],int64,float64)',cache=True)
 def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf,dt,h):
 	# 1-generation transition prob based on Normal distn
@@ -95,7 +40,6 @@ def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf,dt,h):
 		logP[lf-1] = 0
 		return logP
 	else:
-
 		if s != 0:
 			mu = p - 2*s*p*(1.0-p)*(p+h*(1-2*p))*dt
 
@@ -104,13 +48,8 @@ def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf,dt,h):
 
 		sigma = np.sqrt(p*(1.0-p)/(4.0*N)*dt)
 
-                      
 		pi0 = np.interp(np.array([(FREQS[0]-mu)/sigma]),z_bins,z_logcdf)[0]
 		pi1 = np.interp(np.array([(FREQS[lf-1]-mu)/sigma]),z_bins,z_logsf)[0]
-
-		x = np.array([0.0,pi0,pi1])
-		b = np.array([1.0,-1.0,-1.0])
-		middleNorm = _logsumexpb(x,b)
 
 		middleP = np.zeros(lf-2)
 		for j in range(1,lf-1):
@@ -144,9 +83,7 @@ def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf,dt,h):
 		row = _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf,1,h)
 		p1[i,:] = row
 
-	# exponentiate matrix
-	pn = _log_matrix_power(p1,int(dt))
-	return pn
+	return(p1)
 
 @njit('float64(float64[:],float64)')
 def _hap_genotype_likelihood_emission(ancGLs,p):
@@ -203,13 +140,6 @@ def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGL
     alpha = -np.log(freqs) 
     binEdges = np.array([0]+[0.5*(freqs[i]+freqs[i+1]) for i in range(len(freqs)-1)]+[1])
     alpha += np.log(np.diff(binEdges))
-
-    # uniform prior
-    #alpha = np.zeros(len(freqs))
-
-    # initial freq = min
-    #alpha = np.ones(len(freqs))*-np.inf
-    #alpha[0] = 0
 	
     alpha -= _logsumexp(alpha)
     
@@ -220,8 +150,6 @@ def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGL
     prevNt = -1
     prevst = -1
     prevdt = -1
-    prevNumDerCoals = -1
-    prevNumAncCoals = -1
     
     cumGens = epochs[-1]
     
@@ -232,21 +160,15 @@ def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGL
     coalEmissions = np.zeros(lf)
     N0 = N[0]
 
-    cpTrans = np.ones((lf,lf))*1/lf
     for tb in range(T-1,0,-1):
-        #print('F',tb,alpha[::24])
         dt = -epochs[tb]+epochs[tb+1]
         epoch = np.array([cumGens - dt,cumGens])
         Nt = N[tb]
         
         st = sel[tb]
         prevAlpha = np.copy(alpha)
-        
-        if np.sum(tb==changePts) != 0:
-            #changePts
-            currTrans = cpTrans
 
-        elif prevNt != Nt or prevst != st or prevdt != dt or np.sum(tb+1==changePts) != 0:
+        if prevNt != Nt or prevst != st or prevdt != dt or np.sum(tb+1==changePts) != 0:
             #change in selection/popsize, recalc trans prob
             currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf,dt,h)
         
@@ -271,22 +193,15 @@ def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGL
             derCoals = np.copy(times[0,:])
             derCoals = derCoals[derCoals <= cumGens]
             derCoals = derCoals[derCoals > cumGens-dt]
-            numDerCoals = len(derCoals)
             ancCoals = np.copy(times[1,:])
             ancCoals = ancCoals[ancCoals <= cumGens]
             ancCoals = ancCoals[ancCoals > cumGens-dt]
-            numAncCoals = len(ancCoals)
             nDerRemaining += len(derCoals)
             nAncRemaining += len(ancCoals)
-            #print(epoch,derCoals,nDerRemaining,nAncRemaining)
-            #if prevNt != Nt or prevst != st or prevdt != dt or numDerCoals != 0 or prevNumAncCoals != 0 or numAncCoals != 0 or prevNumAncCoals != 0:
-                #print(cumGens)
             for j in range(lf):
                     coalEmissions[j] = _log_coal_density(derCoals,nDerRemaining,epoch,freqs[j],Nt,N0,anc=0)
                     coalEmissions[j] += _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,N0,anc=1)
 
-        
-        #print(tb,ancientGLrows)
         for i in range(lf):
             alpha[i] = _logsumexp(prevAlpha + currTrans[i,:] + glEmissions + coalEmissions) 
             if np.isnan(alpha[i]):
@@ -295,8 +210,6 @@ def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGL
         prevNt = Nt
         prevdt = dt
         prevst = st
-        prevNumAncCoals = numAncCoals
-        prevNumDerCoals = numDerCoals
         cumGens -= dt
         alphaMat[tb,:] = alpha
     return alphaMat
@@ -324,8 +237,6 @@ def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientG
     prevNt = -1
     prevst = -1
     prevdt = -1
-    prevNumDerCoals = -1
-    prevNumAncCoals = -1
     
     cumGens = 0
     
@@ -335,21 +246,15 @@ def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientG
     nAncRemaining = nAnc
     N0 = N[0]
     coalEmissions = np.zeros(lf)
-    cpTrans = np.ones((lf,lf))*1/lf
 
     for tb in range(0,T):
-        #print('B',tb,alpha[::24])
         dt = epochs[tb+1]-epochs[tb]
         Nt = N[tb]
         epoch = np.array([cumGens,cumGens+dt])
         st = sel[tb]
         prevAlpha = np.copy(alpha)
-
-        if np.sum(tb==changePts) != 0:
-            currTrans = cpTrans
         
-        elif prevNt != Nt or prevst != st or prevdt != dt or np.sum(tb-1==changePts) != 0:
-            #print(Nt,st,dt)
+        if prevNt != Nt or prevst != st or prevdt != dt or np.sum(tb-1==changePts) != 0:
             currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf,dt,h)
         
         #grab ancient GL rows
@@ -370,27 +275,20 @@ def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientG
         # calculate coal emission probs
         if noCoals:
             coalEmissions = np.zeros(lf)
-            numAncCoals = -1
-            numDerCoals = -1
-        else:            
+        else:         
             derCoals = np.copy(times[0,:])
             derCoals = derCoals[derCoals > cumGens]
             derCoals = derCoals[derCoals <= cumGens+dt]
-            numDerCoals = len(derCoals)
             ancCoals = np.copy(times[1,:])
             ancCoals = ancCoals[ancCoals > cumGens]
             ancCoals = ancCoals[ancCoals <= cumGens+dt]
-            numAncCoals = len(ancCoals)
             #print(epoch,derCoals,nDerRemaining,nAncRemaining)
-            #if prevNt != Nt or prevst != st or prevdt != dt or numDerCoals != 0 or prevNumAncCoals != 0 or numAncCoals != 0 or prevNumAncCoals != 0:
             for j in range(lf):
                     coalEmissions[j] = _log_coal_density(derCoals,nDerRemaining,epoch,freqs[j],Nt,N0,anc=0)
                     coalEmissions[j] += _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,N0,anc=1)
             nDerRemaining -= len(derCoals)
             nAncRemaining -= len(ancCoals)
 
-        
-        
         #print(tb,ancientGLrows)
         for i in range(lf):
             alpha[i] = _logsumexp(prevAlpha + currTrans[:,i] ) + glEmissions[i] + coalEmissions[i]
@@ -400,8 +298,6 @@ def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientG
         prevNt = Nt
         prevdt = dt
         prevst = st
-        prevNumDerCoals = numDerCoals
-        prevNumAncCoals = numAncCoals
         
         cumGens += dt
         alphaMat[tb,:] = alpha
@@ -431,7 +327,6 @@ def proposal_density(times,epochs,N):
         Coals = np.copy(combinedTimes)
         Coals = Coals[Coals > cumGens]
         Coals = Coals[Coals <= cumGens+dt]
-        numCoals = len(Coals)
       
         logl += _log_coal_density(Coals,nRemaining,epoch,1.0,Nt,N0,anc=0)
         nRemaining -= len(Coals)
