@@ -11,8 +11,8 @@ def _logsumexpb(a,b):
     a_max = np.max(a)
     return np.log(np.sum(b * np.exp(a - a_max))) + a_max
 
-@njit('float64[:](int64,float64,float64,float64[:],float64[:],float64[:],float64[:],int64,float64)',cache=True)
-def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf,dt,h):
+@njit('float64[:](int64,float64,float64,float64[:],float64[:],float64[:],float64[:],float64)',cache=True)
+def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf,h):
 	# 1-generation transition prob based on Normal distn
 	
 	p = FREQS[i]
@@ -25,13 +25,8 @@ def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf,dt,h):
 		logP[lf-1] = 0
 		return logP
 	else:
-		if s != 0:
-			mu = p - 2*s*p*(1.0-p)*(p+h*(1-2*p))*dt
-
-		else:
-			mu = p 
-
-		sigma = np.sqrt(p*(1.0-p)/(4.0*N)*dt)
+		mu = p - 2*s*p*(1.0-p)*(p+h*(1-2*p))
+		sigma = np.sqrt(p*(1.0-p)/(4.0*N))
 
 		pi0 = np.interp(np.array([(FREQS[0]-mu)/sigma]),z_bins,z_logcdf)[0]
 		pi1 = np.interp(np.array([(FREQS[lf-1]-mu)/sigma]),z_bins,z_logsf)[0]
@@ -64,8 +59,7 @@ def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf,h):
 
 	# load rows into p1
 	for i in range(lf):
-		row = _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf,1,h)
-		p1[i,:] = row
+		p1[i,:] = _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf,h)
 
 	return(p1)
 

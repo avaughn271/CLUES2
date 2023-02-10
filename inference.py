@@ -68,8 +68,6 @@ def parse_args():
 	parser.add_argument('--dom',type=float,default=0.5,help='dominance coefficient')
 
 	# adv options
-	parser.add_argument('-thin','--thin',type=int,default=1)
-	parser.add_argument('-burnin','--burnin',type=int,default=0)
 	parser.add_argument('--tCutoff',type=float,default=1000)
 	parser.add_argument('--timeBins',type=str,default=None)
 	parser.add_argument('--sMax',type=float,default=0.1)
@@ -78,7 +76,7 @@ def parse_args():
     
 
 def load_times(args):
-	locusDerTimes,locusAncTimes = parse_clues(args.times+'.timeb',args)
+	locusDerTimes,locusAncTimes = parse_clues(args.times+'.timeb',args) # no thinning or burn-in.
 	print(locusDerTimes.shape,locusAncTimes.shape)	
 	if locusDerTimes.ndim == 0 or locusAncTimes.ndim == 0:
 		raise ValueError
@@ -87,16 +85,16 @@ def load_times(args):
 		locusDerTimes = np.transpose(np.array([locusDerTimes]))
 		locusAncTimes = np.transpose(np.array([locusAncTimes]))
 	elif locusAncTimes.ndim == 2 and locusDerTimes.ndim == 1:
-		locusDerTimes = np.array([locusDerTimes])[:,args.burnin::args.thin]
-		locusAncTimes = np.transpose(locusAncTimes)[:,args.burnin::args.thin]
+		locusDerTimes = np.array([locusDerTimes])[:,0::1]
+		locusAncTimes = np.transpose(locusAncTimes)[:,0::1]
 		M = locusDerTimes.shape[1]	
 	elif locusAncTimes.ndim == 1 and locusDerTimes.ndim == 2:
-		locusAncTimes = np.array([locusAncTimes])[:,args.burnin::args.thin]
-		locusDerTimes = np.transpose(locusDerTimes)[:,args.burnin::args.thin]
+		locusAncTimes = np.array([locusAncTimes])[:,0::1]
+		locusDerTimes = np.transpose(locusDerTimes)[:,0::1]
 		M = locusDerTimes.shape[1]
 	else:
-		locusDerTimes = np.transpose(locusDerTimes)[:,args.burnin::args.thin]
-		locusAncTimes = np.transpose(locusAncTimes)[:,args.burnin::args.thin]
+		locusDerTimes = np.transpose(locusDerTimes)[:,0::1]
+		locusAncTimes = np.transpose(locusAncTimes)[:,0::1]
 		M = locusDerTimes.shape[1]
 	n = locusDerTimes.shape[0] + 1
 	m = locusAncTimes.shape[0] + 1
@@ -241,9 +239,6 @@ if __name__ == "__main__":
 	if args.times == None and args.ancientSamps == None and args.ancientHaps == None:
 		print('You need to supply coalescence times (--times) and/or ancient samples (--ancientSamps) and/or ancient haploid samples (--ancientHaps)')
 	
-	print()
-	print('Loading data and initializing model...')
-
 	# load data and set up model
 	sMax = args.sMax	
 	timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq,h = load_data(args)
@@ -275,7 +270,6 @@ if __name__ == "__main__":
 	    
 	logL0 = likelihood_wrapper(S0,timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,h,sMax)
 
-	print('Optimizing likelihood surface using Nelder-Mead...')
 	if times.shape[2] > 1:
 		print('\t(Importance sampling with M = %d Relate samples)'%(times.shape[2]))
 		print()
@@ -285,34 +279,18 @@ if __name__ == "__main__":
 	S = res.x
 	L = res.fun
 
-	print('#'*10)
-	print()
-	print('logLR: %.4f'%(-res.fun+logL0))
-	print()
-	print('MLE:')
-	print('========')
-	print('epoch\tselection')
+	toprint = []
+
+	toprint.append('logLR: %.4f'%(-res.fun+logL0) + "\n")
+	toprint.append('Epoch\tSelection MLE'+ "\n")
 	for s,t,u in zip(S,timeBins[:-1],timeBins[1:]):
-		print('%d-%d\t%.5f'%(t,u,s))
+		toprint.append('%d-%d\t%.5f'%(t,u,s)+ "\n")
 
 	# infer trajectory @ MLE of selection parameter
-	print(noCoals)
-
 	post = traj_wrapper(res.x,timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,h,sMax)
 	
-	if args.out != None:
-		np.save(args.out+'.epochs',epochs)
-		np.save(args.out+'.freqs',freqs)
-		np.save(args.out+'.post',post)
-	else:
-		print()
-		print('Trajectory:')
-		print('=============')
-		print('gens_bp\tfreq')
-		for i in range(0,int(timeBins[-1]),int(timeBins[-1]//(50))):
-			if i > epochs[-1]:
-				break
-			print(i,np.sum(freqs * np.exp(post[:,i])))
-		print()
-		print('Finished.')
-		print()
+	f = open(args.out+"_inference.txt", "w+")
+	f.writelines(toprint)
+	f.close()
+	np.savetxt(args.out+"_post.txt", post, delimiter=",") #print(i,np.sum(freqs * np.exp(post[:,i])))
+	np.savetxt(args.out+"_freqs.txt", freqs, delimiter=",") #print(i,np.sum(freqs * np.exp(post[:,i])))

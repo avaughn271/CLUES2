@@ -3,15 +3,15 @@ import numpy as np
 import argparse
 
 parser = argparse.ArgumentParser()
-parser.add_argument('inputPrefix',type=str)
-parser.add_argument('figurePrefix',type=str)
+parser.add_argument('--freqs',type=str)
+parser.add_argument('--post',type=str)
+parser.add_argument('--figure',type=str)
 parser.add_argument('--ext',type=str,default='pdf')
 args = parser.parse_args()
 
-epochs = np.load('%s.epochs.npy'%(args.inputPrefix))
-freqs = np.load('%s.freqs.npy'%(args.inputPrefix))
-logpost = np.load('%s.post.npy'%(args.inputPrefix))
-
+freqs =  np.loadtxt(args.freqs, delimiter=",", dtype=float)
+logpost = np.loadtxt(args.post, delimiter=",", dtype=float)
+epochs = np.linspace(0,logpost.shape[1],logpost.shape[1] + 1)
 f,ax = plt.subplots(1,1)
 f.set_size_inches(20,10)
 
@@ -24,6 +24,6 @@ plt.yticks(fontsize=18)
 
 cbar = plt.colorbar()
 cbar.ax.set_ylabel('Posterior prob.\n\n',rotation=270,fontsize=20,labelpad=40)
-cbar.ax.tick_params(labelsize=18) 
+cbar.ax.tick_params(labelsize=18)
 
-plt.savefig('%s.%s'%(args.figurePrefix,args.ext),format=args.ext)
+plt.savefig('%s.%s'%(args.figure,args.ext),format=args.ext)
