@@ -1,30 +1,15 @@
 import numpy as np
-from numba import njit 
+from numba import njit
 
 @njit('float64(float64[:])',cache=True)
 def _logsumexp(a):
     a_max = np.max(a)
-
-    tmp = np.exp(a - a_max)
-
-    s = np.sum(tmp)
-    out = np.log(s)
-
-    out += a_max
-    return out
+    return np.log(np.sum(np.exp(a - a_max))) + a_max
 
 @njit('float64(float64[:],float64[:])',cache=True)
 def _logsumexpb(a,b):
-
     a_max = np.max(a)
-
-    tmp = b * np.exp(a - a_max)
-
-    s = np.sum(tmp)
-    out = np.log(s)
-
-    out += a_max
-    return out
+    return np.log(np.sum(b * np.exp(a - a_max))) + a_max
 
 @njit('float64[:](int64,float64,float64,float64[:],float64[:],float64[:],float64[:],int64,float64)',cache=True)
 def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf,dt,h):
@@ -66,15 +51,14 @@ def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf,dt,h):
 			l2 = np.interp(np.array([(mhi-mu)/sigma]),z_bins,z_logcdf)[0]
 			middleP[j-1] = _logsumexpb(np.array([l1,l2]),np.array([-1.0,1.0]))                    
 
-
 		logP[0] = pi0
 		logP[1:lf-1] = middleP
 		logP[lf-1] = pi1
 
 	return logP
 
-@njit('float64[:,:](float64,float64,float64[:],float64[:],float64[:],float64[:],int64,float64)',cache=True)
-def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf,dt,h):
+@njit('float64[:,:](float64,float64,float64[:],float64[:],float64[:],float64[:],float64)',cache=True)
+def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf,h):
 	lf = len(FREQS)
 	p1 = np.zeros((lf,lf))
 
@@ -101,8 +85,8 @@ def _genotype_likelihood_emission(ancGLs,p):
 		emission = -np.inf
 	return emission
 
-@njit('float64(float64[:],int64,float64[:],float64,float64,float64,int64)',cache=True)
-def _log_coal_density(times,n,epoch,xi,Ni,N0,anc=0):
+@njit('float64(float64[:],int64,float64[:],float64,float64,int64)',cache=True)
+def _log_coal_density(times,n,epoch,xi,Ni,anc=0):
     if n == 1:
         # this flag indicates to ignore coalescence
         return 0.0
@@ -127,15 +111,14 @@ def _log_coal_density(times,n,epoch,xi,Ni,N0,anc=0):
     logp += logPk
     return logp
 
-@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],float64[:],int64,float64)',cache=True)
-def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,changePts,noCoals=1,h=0.5):
+@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64,float64)',cache=True)
+def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1,h=0.5):
 
     '''
     Moves forward in time from past to present
     '''
     
-    lf = len(freqs)
-    
+    lf = len(freqs)    
     # neutral sfs
     alpha = -np.log(freqs) 
     binEdges = np.array([0]+[0.5*(freqs[i]+freqs[i+1]) for i in range(len(freqs)-1)]+[1])
@@ -158,23 +141,21 @@ def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGL
     nAnc = np.sum(times[1,:]>=0)+1
     nAncRemaining = nAnc - np.sum(np.logical_and(times[1,:]>=0, times[1,:]<=epochs[-1]))
     coalEmissions = np.zeros(lf)
-    N0 = N[0]
 
     for tb in range(T-1,0,-1):
-        dt = -epochs[tb]+epochs[tb+1]
-        epoch = np.array([cumGens - dt,cumGens])
+        epoch = np.array([cumGens - 1.0,cumGens])
         Nt = N[tb]
         
         st = sel[tb]
         prevAlpha = np.copy(alpha)
 
-        if prevNt != Nt or prevst != st or prevdt != dt or np.sum(tb+1==changePts) != 0:
+        if prevNt != Nt or prevst != st or prevdt != 1.0:
             #change in selection/popsize, recalc trans prob
-            currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf,dt,h)
+            currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf,h)
         
         #grab ancient GL rows
-        ancientGLrows = ancientGLs[np.logical_and(ancientGLs[:,0] <= cumGens, ancientGLs[:,0] > cumGens - dt)]
-        ancientHapGLrows = ancientHapGLs[np.logical_and(ancientHapGLs[:,0] <= cumGens, ancientHapGLs[:,0] > cumGens - dt)]
+        ancientGLrows = ancientGLs[np.logical_and(ancientGLs[:,0] <= cumGens, ancientGLs[:,0] > cumGens - 1.0)]
+        ancientHapGLrows = ancientHapGLs[np.logical_and(ancientHapGLs[:,0] <= cumGens, ancientHapGLs[:,0] > cumGens - 1.0)]
 
         # calculate ancient GL emission probs
         glEmissions = np.zeros(lf)
@@ -192,15 +173,15 @@ def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGL
         else:
             derCoals = np.copy(times[0,:])
             derCoals = derCoals[derCoals <= cumGens]
-            derCoals = derCoals[derCoals > cumGens-dt]
+            derCoals = derCoals[derCoals > cumGens-1.0]
             ancCoals = np.copy(times[1,:])
             ancCoals = ancCoals[ancCoals <= cumGens]
-            ancCoals = ancCoals[ancCoals > cumGens-dt]
+            ancCoals = ancCoals[ancCoals > cumGens-1.0]
             nDerRemaining += len(derCoals)
             nAncRemaining += len(ancCoals)
             for j in range(lf):
-                    coalEmissions[j] = _log_coal_density(derCoals,nDerRemaining,epoch,freqs[j],Nt,N0,anc=0)
-                    coalEmissions[j] += _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,N0,anc=1)
+                    coalEmissions[j] = _log_coal_density(derCoals,nDerRemaining,epoch,freqs[j],Nt,anc=0)
+                    coalEmissions[j] += _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,anc=1)
 
         for i in range(lf):
             alpha[i] = _logsumexp(prevAlpha + currTrans[i,:] + glEmissions + coalEmissions) 
@@ -208,14 +189,14 @@ def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGL
                 alpha[i] = -np.inf
         
         prevNt = Nt
-        prevdt = dt
+        prevdt = 1.0
         prevst = st
-        cumGens -= dt
+        cumGens -= 1.0
         alphaMat[tb,:] = alpha
     return alphaMat
     
-@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],float64[:],int64,float64,float64)',cache=True)
-def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,changePts,noCoals=1,currFreq=-1,h=0.5):
+@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64,float64,float64)',cache=True)
+def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1,currFreq=-1,h=0.5):
 
     '''
     Moves backward in time from present to past
@@ -244,25 +225,23 @@ def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientG
     nDerRemaining = nDer
     nAnc = np.sum(times[1,:]>=0)+1
     nAncRemaining = nAnc
-    N0 = N[0]
     coalEmissions = np.zeros(lf)
 
     for tb in range(0,T):
-        dt = epochs[tb+1]-epochs[tb]
         Nt = N[tb]
-        epoch = np.array([cumGens,cumGens+dt])
+        epoch = np.array([cumGens,cumGens+1.0])
         st = sel[tb]
         prevAlpha = np.copy(alpha)
         
-        if prevNt != Nt or prevst != st or prevdt != dt or np.sum(tb-1==changePts) != 0:
-            currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf,dt,h)
+        if prevNt != Nt or prevst != st or prevdt != 1.0:
+            currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf,h)
         
         #grab ancient GL rows
         ancientGLrows = ancientGLs[ancientGLs[:,0] > cumGens]
-        ancientGLrows = ancientGLrows[ancientGLrows[:,0] <= cumGens + dt]
+        ancientGLrows = ancientGLrows[ancientGLrows[:,0] <= cumGens + 1.0]
 
         ancientHapGLrows = ancientHapGLs[ancientHapGLs[:,0] > cumGens]
-        ancientHapGLrows = ancientHapGLrows[ancientHapGLrows[:,0] <= cumGens + dt]
+        ancientHapGLrows = ancientHapGLrows[ancientHapGLrows[:,0] <= cumGens + 1.0]
 
         glEmissions = np.zeros(lf)
         for j in range(lf):
@@ -278,28 +257,26 @@ def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientG
         else:         
             derCoals = np.copy(times[0,:])
             derCoals = derCoals[derCoals > cumGens]
-            derCoals = derCoals[derCoals <= cumGens+dt]
+            derCoals = derCoals[derCoals <= cumGens+1.0]
             ancCoals = np.copy(times[1,:])
             ancCoals = ancCoals[ancCoals > cumGens]
-            ancCoals = ancCoals[ancCoals <= cumGens+dt]
-            #print(epoch,derCoals,nDerRemaining,nAncRemaining)
+            ancCoals = ancCoals[ancCoals <= cumGens+1.0]
             for j in range(lf):
-                    coalEmissions[j] = _log_coal_density(derCoals,nDerRemaining,epoch,freqs[j],Nt,N0,anc=0)
-                    coalEmissions[j] += _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,N0,anc=1)
+                    coalEmissions[j] = _log_coal_density(derCoals,nDerRemaining,epoch,freqs[j],Nt,anc=0)
+                    coalEmissions[j] += _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,anc=1)
             nDerRemaining -= len(derCoals)
             nAncRemaining -= len(ancCoals)
 
-        #print(tb,ancientGLrows)
         for i in range(lf):
             alpha[i] = _logsumexp(prevAlpha + currTrans[:,i] ) + glEmissions[i] + coalEmissions[i]
             if np.isnan(alpha[i]):
                 alpha[i] = -np.inf
         
         prevNt = Nt
-        prevdt = dt
+        prevdt = 1.0
         prevst = st
         
-        cumGens += dt
+        cumGens += 1.0
         alphaMat[tb,:] = alpha
     return alphaMat
 
@@ -315,7 +292,6 @@ def proposal_density(times,epochs,N):
     combinedTimes = np.sort(np.concatenate((times[0,:],times[1,:])))
     n = np.sum(combinedTimes>=0)+2
     nRemaining = n
-    N0 = N[0]
     for tb in range(0,T):
         dt = epochs[tb+1]-epochs[tb]
         Nt = N[tb]
@@ -328,7 +304,7 @@ def proposal_density(times,epochs,N):
         Coals = Coals[Coals > cumGens]
         Coals = Coals[Coals <= cumGens+dt]
       
-        logl += _log_coal_density(Coals,nRemaining,epoch,1.0,Nt,N0,anc=0)
+        logl += _log_coal_density(Coals,nRemaining,epoch,1.0,Nt,anc=0)
         nRemaining -= len(Coals)
         
         cumGens += dt

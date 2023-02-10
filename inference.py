@@ -25,7 +25,6 @@ def parse_clues(filename,args):
         #get #mutations and #sampled trees per mutation
         filepos = 0
         num_muts, num_sampled_trees_per_mut = np.frombuffer(data[slice(filepos, filepos+8, 1)], dtype = np.int32)
-        #print(num_muts, num_sampled_trees_per_mut)
 
         filepos += 8
         #iterate over mutations
@@ -36,8 +35,6 @@ def parse_clues(filename,args):
             filepos += 2
             daf, n = np.frombuffer(data[slice(filepos, filepos+8, 1)], dtype = np.int32)
             filepos += 8
-            #print("BP: %d, anc: %s, der %s, DAF: %d, n: %d" % (bp, str(anc), str(der), daf, n))
-            
             
             if daf >= n-1:
             	anctimes = np.empty((num_sampled_trees_per_mut,0))
@@ -52,10 +49,6 @@ def parse_clues(filename,args):
                 num_dertimes = 4*(daf-1)*num_sampled_trees_per_mut
                 dertimes     = np.reshape(np.frombuffer(data[slice(filepos, filepos+num_dertimes, 1)], dtype = np.float32), (num_sampled_trees_per_mut, daf-1))
                 filepos     += num_dertimes
-            if (args.A1 is not None) and (args.A1 != der.decode('ascii')):
-                tmp = np.copy(dertimes)
-                dertimes = np.copy(anctimes)
-                anctimes = tmp 
 		
     return dertimes,anctimes
 
@@ -65,8 +58,6 @@ def parse_args():
 		help='Should refer to files <times>.{{der,anc}}.npy (exclude prefix .{{der,anc}}.npy)',
 		default=None)
 	parser.add_argument('--popFreq',type=float,default=None)
-	parser.add_argument('-q','--quiet',action='store_true')
-	parser.add_argument('-o','--output',dest='outFile',type=str,default=None)
 
 	parser.add_argument('--ancientSamps',type=str,default=None)
 	parser.add_argument('--ancientHaps',type=str,default=None)
@@ -77,7 +68,6 @@ def parse_args():
 	parser.add_argument('--dom',type=float,default=0.5,help='dominance coefficient')
 
 	# adv options
-	parser.add_argument('--A1',type=str,default=None)
 	parser.add_argument('-thin','--thin',type=int,default=1)
 	parser.add_argument('-burnin','--burnin',type=int,default=0)
 	parser.add_argument('--tCutoff',type=float,default=1000)
@@ -85,14 +75,7 @@ def parse_args():
 	parser.add_argument('--sMax',type=float,default=0.1)
 	parser.add_argument('--df',type=int,default=150)
 	return parser.parse_args()
-
-
-def load_normal_tables():
-    # read in global Phi(z) lookups
-    z_bins = np.genfromtxt(os.path.dirname(__file__) + '/utils/z_bins.txt')
-    z_logcdf = np.genfromtxt(os.path.dirname(__file__) + '/utils/z_logcdf.txt')
-    z_logsf = np.genfromtxt(os.path.dirname(__file__) + '/utils/z_logsf.txt')
-    return z_bins,z_logcdf,z_logsf
+    
 
 def load_times(args):
 	locusDerTimes,locusAncTimes = parse_clues(args.times+'.timeb',args)
@@ -127,24 +110,16 @@ def load_times(args):
 
 	row1[:locusAncTimes.shape[0],:] = locusAncTimes
 	locusTimes = np.array([row0,row1])
-	return locusTimes, n, m
+	return locusTimes
 
 def load_data(args):
 		# load coalescence times
 	noCoals = (args.times == None)
 	if not noCoals:
-		times, n, m = load_times(args)
-		if args.popFreq == None:
-			x0 = n/(n+m)
-		else:
-			x0 = args.popFreq
+		times = load_times(args)
 	else:
 		times = np.zeros((2,0,0))
-		x0 = args.popFreq
-	if x0 == None:
-		currFreq = -1
-	else:
-		currFreq = x0
+	currFreq = args.popFreq
 
 	# load ancient samples/genotype likelihoods
 	if args.ancientSamps != None:
@@ -175,10 +150,6 @@ def load_data(args):
 		Ne = N[np.digitize(epochs,Nepochs)-1]
 	else:
 		Ne = args.N * np.ones(int(tCutoff))
-
-	# load z tables
-	z_bins,z_logcdf,z_logsf = load_normal_tables()
-
 	# set up freq bins
 	c = 1/(2*np.min([Ne[0],100000]))
 	df = args.df
@@ -189,7 +160,7 @@ def load_data(args):
 	else:
 		timeBins = np.array([0.0,tCutoff])
 
-	return timeBins,times,epochs,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals,currFreq,args.dom
+	return timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq,args.dom
 
 def likelihood_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,h,sMax):
     S = theta
@@ -213,21 +184,15 @@ def likelihood_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,anc
     	M = tShape[2]
     	loglrs = np.zeros(M)
     	for i in range(M):
-    		betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,np.array([]),noCoals=noCoals,currFreq=currFreq,h=h)
+    		betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq,h=h)
     		logl = logsumexp(betaMat[-2,:])
     		logl0 = proposal_density(times[:,:,i],epochs,N)
     		loglrs[i] = logl-logl0
     	logl = -1 * (-np.log(M) + logsumexp(loglrs))
     else:
-    	betaMat = backward_algorithm(sel,t,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,np.array([]),noCoals=noCoals,currFreq=currFreq,h=h)
+    	betaMat = backward_algorithm(sel,t,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq,h=h)
     	logl = -logsumexp(betaMat[-2,:])
     return logl
-
-def out(args,epochs,freqs,post):
-	np.save(args.out+'.epochs',epochs)
-	np.save(args.out+'.freqs',freqs)
-	np.save(args.out+'.post',post)
-	return
 
 def traj_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,h,sMax):
     S = theta
@@ -255,7 +220,7 @@ def traj_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs
     	postBySamples = np.zeros((F,T-1,M))
     	for i in range(M):
     		betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,np.array([]),noCoals=noCoals,currFreq=currFreq,h=h)
-    		alphaMat = forward_algorithm(sel,times[:,:,i],epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,np.array([]),noCoals=noCoals,h=h)
+    		alphaMat = forward_algorithm(sel,times[:,:,i],epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,h=h)
     		logl = logsumexp(betaMat[-2,:])
     		logl0 = proposal_density(times[:,:,i],epochs,N)
     		loglrs[i] = logl-logl0
@@ -265,8 +230,8 @@ def traj_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs
 
     else:
     	post = np.zeros((F,T))
-    	betaMat = backward_algorithm(sel,t,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,np.array([]),noCoals=noCoals,currFreq=currFreq,h=h)
-    	alphaMat = forward_algorithm(sel,t,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,np.array([]),noCoals=noCoals,h=h)
+    	betaMat = backward_algorithm(sel,t,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq,h=h)
+    	alphaMat = forward_algorithm(sel,t,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,h=h)
     	post = (alphaMat[1:,:] + betaMat[:-1,:]).transpose()
     	post -= logsumexp(post,axis=0)
     return post
@@ -281,7 +246,11 @@ if __name__ == "__main__":
 
 	# load data and set up model
 	sMax = args.sMax	
-	timeBins,times,epochs,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals,currFreq,h = load_data(args)
+	timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq,h = load_data(args)
+	# read in global Phi(z) lookups
+	z_bins = np.genfromtxt(os.path.dirname(__file__) + '/utils/z_bins.txt')
+	z_logcdf = np.genfromtxt(os.path.dirname(__file__) + '/utils/z_logcdf.txt')
+	z_logsf = np.genfromtxt(os.path.dirname(__file__) + '/utils/z_logsf.txt')
 
 	Ne *= 1/2
 	noCoals = int(noCoals)
@@ -332,7 +301,9 @@ if __name__ == "__main__":
 	post = traj_wrapper(res.x,timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,h,sMax)
 	
 	if args.out != None:
-		out(args,epochs,freqs,post)
+		np.save(args.out+'.epochs',epochs)
+		np.save(args.out+'.freqs',freqs)
+		np.save(args.out+'.post',post)
 	else:
 		print()
 		print('Trajectory:')
