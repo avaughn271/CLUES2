@@ -6,7 +6,6 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--freqs',type=str)
 parser.add_argument('--post',type=str)
 parser.add_argument('--figure',type=str)
-parser.add_argument('--ext',type=str,default='pdf')
 args = parser.parse_args()
 
 freqs =  np.loadtxt(args.freqs, delimiter=",", dtype=float)
@@ -23,7 +22,7 @@ plt.xticks(fontsize=18)
 plt.yticks(fontsize=18)
 
 cbar = plt.colorbar()
-cbar.ax.set_ylabel('Posterior prob.\n\n',rotation=270,fontsize=20,labelpad=40)
+cbar.ax.set_ylabel('Posterior probability\n\n',rotation=270,fontsize=20,labelpad=40)
 cbar.ax.tick_params(labelsize=18)
 
-plt.savefig('%s.%s'%(args.figure,args.ext),format=args.ext)
+plt.savefig('%s.%s'%(args.figure,'png'),format='png', dpi=800, bbox_inches='tight')
