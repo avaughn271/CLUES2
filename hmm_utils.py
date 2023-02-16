@@ -11,55 +11,49 @@ def _logsumexpb(a,b):
     a_max = np.max(a)
     return np.log(np.sum(b * np.exp(a - a_max))) + a_max
 
-@njit('float64[:](int64,float64,float64,float64[:],float64[:],float64[:],float64[:],float64)',cache=True)
-def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf,h):
+@njit('float64[:](int64,float64,float64,float64[:],float64[:],float64[:],float64[:])',cache=True)
+def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf):
 	# 1-generation transition prob based on Normal distn
 	
-	p = FREQS[i]
-	lf = len(FREQS)
-	logP = np.NINF * np.ones(lf)
+    p = FREQS[i]
+    lf = len(FREQS)
+    logP = np.NINF * np.ones(lf)
+    mu = p-s*p*(1.0-p) # this is the only place where dominance or frequency changes come in 
+    #            This should be the inverse of (x+sx)/(1+sx)
+    sigma = np.sqrt(p*(1.0-p)/(4.0*N))
 
-	if p <= 0.0:
-		logP[0] = 0
-	elif p >= 1.0:
-		logP[lf-1] = 0
-		return logP
-	else:
-		mu = p - 2*s*p*(1.0-p)*(p+h*(1-2*p))
-		sigma = np.sqrt(p*(1.0-p)/(4.0*N))
+    pi0 = np.interp(np.array([(FREQS[0]-mu)/sigma]),z_bins,z_logcdf)[0]
+    pi1 = np.interp(np.array([(FREQS[lf-1]-mu)/sigma]),z_bins,z_logsf)[0]
 
-		pi0 = np.interp(np.array([(FREQS[0]-mu)/sigma]),z_bins,z_logcdf)[0]
-		pi1 = np.interp(np.array([(FREQS[lf-1]-mu)/sigma]),z_bins,z_logsf)[0]
+    middleP = np.zeros(lf-2)
+    for j in range(1,lf-1):
+        if j == 1:
+            mlo = FREQS[0]
+        else:
+            mlo = np.mean(np.array([FREQS[j],FREQS[j-1]]))
+        if j == lf-2:
+            mhi = FREQS[j+1]
+        else:
+            mhi = np.mean(np.array([FREQS[j],FREQS[j+1]]))
 
-		middleP = np.zeros(lf-2)
-		for j in range(1,lf-1):
-			if j == 1:
-				mlo = FREQS[0]
-			else:
-				mlo = np.mean(np.array([FREQS[j],FREQS[j-1]]))
-			if j == lf-2:
-				mhi = FREQS[j+1]
-			else:
-				mhi = np.mean(np.array([FREQS[j],FREQS[j+1]]))
-    
-			l1 = np.interp(np.array([(mlo-mu)/sigma]),z_bins,z_logcdf)[0]
-			l2 = np.interp(np.array([(mhi-mu)/sigma]),z_bins,z_logcdf)[0]
-			middleP[j-1] = _logsumexpb(np.array([l1,l2]),np.array([-1.0,1.0]))                    
+        l1 = np.interp(np.array([(mlo-mu)/sigma]),z_bins,z_logcdf)[0]
+        l2 = np.interp(np.array([(mhi-mu)/sigma]),z_bins,z_logcdf)[0]
+        middleP[j-1] = _logsumexpb(np.array([l1,l2]),np.array([-1.0,1.0]))                    
 
-		logP[0] = pi0
-		logP[1:lf-1] = middleP
-		logP[lf-1] = pi1
+    logP[0] = pi0
+    logP[1:lf-1] = middleP
+    logP[lf-1] = pi1
 
-	return logP
+    return logP
 
-@njit('float64[:,:](float64,float64,float64[:],float64[:],float64[:],float64[:],float64)',cache=True)
-def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf,h):
+@njit('float64[:,:](float64,float64,float64[:],float64[:],float64[:],float64[:])',cache=True)
+def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf):
 	lf = len(FREQS)
 	p1 = np.zeros((lf,lf))
 
 	# load rows into p1
 	for i in range(lf):
-		p1[i,:] = _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf,h)
+		p1[i,:] = _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf)
 
 	return(p1)
 
@@ -105,8 +99,8 @@ def _log_coal_density(times,n,epoch,xi,Ni,anc=0):
     logp += logPk
     return logp
 
-@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64,float64)',cache=True)
-def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1,h=0.5):
+@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64)',cache=True)
+def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1):
 
     '''
     Moves forward in time from past to present
@@ -126,7 +120,6 @@ def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGL
 
     prevNt = -1
     prevst = -1
-    prevdt = -1
     
     cumGens = epochs[-1]
     
@@ -143,9 +136,9 @@ def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGL
         st = sel[tb]
         prevAlpha = np.copy(alpha)
 
-        if prevNt != Nt or prevst != st or prevdt != 1.0:
+        if prevNt != Nt or prevst != st:
             #change in selection/popsize, recalc trans prob
-            currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf,h)
+            currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)
         
         #grab ancient GL rows
         ancientGLrows = ancientGLs[np.logical_and(ancientGLs[:,0] <= cumGens, ancientGLs[:,0] > cumGens - 1.0)]
@@ -183,14 +176,13 @@ def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGL
                 alpha[i] = -np.inf
         
         prevNt = Nt
-        prevdt = 1.0
         prevst = st
         cumGens -= 1.0
         alphaMat[tb,:] = alpha
     return alphaMat
     
-@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64,float64,float64)',cache=True)
-def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1,currFreq=-1,h=0.5):
+@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64,float64)',cache=True)
+def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1,currFreq=-1):
 
     '''
     Moves backward in time from present to past
@@ -211,7 +203,6 @@ def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientG
     
     prevNt = -1
     prevst = -1
-    prevdt = -1
     
     cumGens = 0
     
@@ -226,9 +217,8 @@ def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientG
         epoch = np.array([cumGens,cumGens+1.0])
         st = sel[tb]
         prevAlpha = np.copy(alpha)
-        
-        if prevNt != Nt or prevst != st or prevdt != 1.0:
-            currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf,h)
+        if prevNt != Nt or prevst != st:
+            currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)
         
         #grab ancient GL rows
         ancientGLrows = ancientGLs[ancientGLs[:,0] > cumGens]
@@ -267,7 +257,6 @@ def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientG
                 alpha[i] = -np.inf
         
         prevNt = Nt
-        prevdt = 1.0
         prevst = st
         
         cumGens += 1.0
