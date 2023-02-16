@@ -27,26 +27,77 @@ CLUES has been tested on two different input files: posterior samples of ARGs (a
 
 times (TODO)
 
-Samples:
+Samples: These input files look like the following file. The first columns are the sampling times of the ancient samples (given in generations). The second column is the log genotypes probability of 0/0. The third column is the log genotype probability of 0/1 (which is to say 1|0 or 0|1). The fourth column is the log genotype probability of (1/1). For example, the first row of the following file means that an individual was sampled 16.48 generations ago that we are 100% has a 0/0 genotype. The second row of the following file means that an individual was sampled 170.68 generations ago to which we assign a probability of 0.105 of being 0/0, a probability 0.878 of being 0/1, and a probability of 0.017 of being 1/1. Uncertainty in genotype calls of ancient data can be caused by imputation. The data should be sorted in increasing ordr by sampling time.
 
 ```bash
 1.648171304943918258e+01 0.000000000000000000e+00 -inf -inf
-160.678571428571 -2.25379492882461 -0.13010868534702 -4.07454193492592
-147.035714285714 -0.787457860031187 -0.632993257740198 -4.3428059215206
-2.135572624386489338e+01 -inf -inf 0.000000000000000000e+00
+170.678571428571 -2.25379492882461 -0.13010868534702 -4.07454193492592
+190.035714285714 -0.787457860031187 -0.632993257740198 -4.3428059215206
+2.135572624386489338e+02 -inf -inf 0.000000000000000000e+00
 ...
 4.967392959190617603e+02 0.000000000000000000e+00 -inf -inf
 4.983198490270729053e+02 0.000000000000000000e+00 -inf -inf
 500.0 0.000000000000000000e+00 -inf -inf
 ```
 
-where the first line is the populations and the subsequent lines are the bi-allelic counts in each population for a number of SNPs. The first and second allele type has no meaning and can be chosen arbitrarily. The population names should only include letters and numbers (no spaces, dashes, underscores, etc.). See the R script "ConvertFromVCF.R" in the "example" folder for a template for converting from VCF files to this input. At minimum, you will need to change the name of the input VCF file and the individual-to-population mapping in this script. Keep in mind that VCF files can be quite complex, and therefore this script may not work for all possible input VCF files. The user should always perform a sanity check between the input and output of this step and should not take the output at face value.
-
 ## Running CLUES
 
 CLUES has 3 steps:
 
 `example/example.timeb` is a binary file containing derived/ancestral coalescence times for the SNP of interest. These are estimated using [Relate v1.1](https://myersgroup.github.io/relate/) [[Speidel, *et al.* Nat. Gen. 2019]](https://www.nature.com/articles/s41588-019-0484-x) and processed using the `extract_coals.py` script. 
+
+## (2) Run Inference
+
+In this step, we run the main CLUES program
+
+```bash
+$ python PATH/inference.py
+```
+
+## This step takes as input:
+
+**--times** The input file of coalescent times as described above. Either this or a sample file must be supplied, but not both.
+
+**--ancientSamps** The input file of ancient genotype proabilities as described above. Either this or a times file must be supplied, but not both.
+
+**--popFreq**  The modern derived allele frequency (corresponding to the allele 1, not 0).
+
+**--N** The population size. This is the HAPLOID population size, denoting the number of haplotypes in a given population, NOT the number of diploid individuals. 100 diploid humans corresponds to an N value of 200. Either this or a coal file must be supplied, but not both.
+
+**--coal** The population size file denoting different population sizes through time. Identical to the file format used by (RELATE)[https://myersgroup.github.io/relate/]. The population sizes considered here are the HAPLOID population size, denoting the number of haplotypes in a given population, NOT the number of diploid individuals. 100 diploid humans corresponds to an N value of 200. Either this or a value of N must be supplied, but not both.
+
+**--tCutoff** The maximum time (in generations) to be considered in the analysis. This is only used if arg samples are used. If ancient allele genotypes are used, the cutoff is automatically set to 1 more than the maximum sampling time.
+
+**--df** This is the number of discretization points that is used to bin the allele frequencies. A higher number will result in less error due to rounding of allele frequencies but at increased computational cost. We find that having a finer discretization (higher df) is more important when N is large and/or s is close to 0. This is because these cases result in smaller allele frequency fluctuations from generation to generation and only a fine discretization grid will be able to model them accurately. The most rigorous way to set df is to steadily increase df until the results appear to have converged, but we find the default value of 400 is sufficient for nearly all cases.
+
+**--timeBins** A file containing one nonnegative number per line, in increasing order. These give the endpoints of the disjoint time intervals in which independent selection coefficients will be inferred. An example file is:
+
+```bash
+0.0
+50.0
+100.0
+150.0
+```
+for which 3 separate selection coefficients will be inferred one each for the intervals [0,50), [50,100), and [100,150). If this file is not supplied, one selection coefficient will be inferred for the interval [0,tCutoff).
+
+**--out** The prefix of the output files.
+
+## This step will produce (in the current working directory)
+
+***out_inference.txt*** A file resembling the following:
+
+```bash
+logLR: 122.4629
+Epoch	Selection MLE
+0-2000	0.00497
+```
+
+where the log-likelihood ratio of selection to no selection is listed. The MLE of the selection coefficient is also given for each epoch, as described by the **timeBins** option.
+
+***out_freqs.txt*** A file containing **df** lines, with each representing one of the discretized allele frequency bins. 
+
+***out_post.txt*** A file containing **df** lines, with each representing one containing **tCutoff** comma separated log probailities. The j'th column of the i'th row contains the log-probability of the derived allele being at frequency freqs[i] at j generations before the present, where freqs represent the frequencies given by the ***out_freqs.txt*** file. 
+
 
 If you use this program, please cite:
   
