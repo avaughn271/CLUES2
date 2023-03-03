@@ -27,23 +27,22 @@ def parse_args():
 def load_times(readtimes): # these are time on an absolute scale, everything else is ones
 	file1 = open(readtimes, 'r')
 	Lines = file1.readlines()
-	der = Lines[0].split(",")
-	anc = Lines[1].split(",")
-	ancnum = [-1] * (len(anc) - 1)
-	dernum = [-1] * (len(der) - 1)
-	for i in range(len(der) - 1):
-		dernum[i] = float(der[i])
-	for i in range(len(anc) - 1):
-		ancnum[i] = float(anc[i])
-	
-	print(dernum)
-	print(ancnum)
-	locusDerTimes = np.empty((len(dernum), 1)) # no thinning or burn-in
-	locusAncTimes =  np.empty((len(ancnum), 1))
-	M = locusDerTimes.shape[1]
-	ntot = locusDerTimes.shape[0] + locusAncTimes.shape[0] + 2 # why not just completely fill it out???
-	locusDerTimes[:,0] = dernum
-	locusAncTimes[:,0] = ancnum
+	M = int(len(Lines) / 2)
+	for m in range(M):
+		der = Lines[2 * m].split(",")
+		anc = Lines[2 * m + 1].split(",")
+		ancnum = [-1] * (len(anc) - 1)
+		dernum = [-1] * (len(der) - 1)
+		for i in range(len(der) - 1):
+			dernum[i] = float(der[i])
+		for i in range(len(anc) - 1):
+			ancnum[i] = float(anc[i])
+		
+		locusDerTimes = np.empty((len(dernum), 1)) # no thinning or burn-in
+		locusAncTimes =  np.empty((len(ancnum), 1))
+		ntot = locusDerTimes.shape[0] + locusAncTimes.shape[0] + 2 # why not just completely fill it out???
+		locusDerTimes[:,0] = dernum
+		locusAncTimes[:,0] = ancnum
 
 	row0 = -1.0 * np.ones((ntot,M))
 
@@ -158,7 +157,7 @@ def traj_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs
 		loglrs = np.zeros(M)
 		postBySamples = np.zeros((F,T-1,M))
 		for i in range(M):
-			betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,np.array([]),noCoals=noCoals,currFreq=currFreq)
+			betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
 			alphaMat = forward_algorithm(sel,times[:,:,i],epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals)
 			logl = logsumexp(betaMat[-2,:])
 			logl0 = proposal_density(times[:,:,i],epochs,N)

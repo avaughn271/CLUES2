@@ -238,7 +238,7 @@ def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientG
         # calculate coal emission probs
         if noCoals:
             coalEmissions = np.zeros(lf)
-        else:         
+        else:
             derCoals = np.copy(times[0,:])
             derCoals = derCoals[derCoals > cumGens]
             derCoals = derCoals[derCoals <= cumGens+1.0]
@@ -271,24 +271,21 @@ def proposal_density(times,epochs,N):
     
     logl = 0.
     cumGens = 0
-    T = len(epochs)-1
     combinedTimes = np.sort(np.concatenate((times[0,:],times[1,:])))
-    n = np.sum(combinedTimes>=0)+2
-    nRemaining = n
-    for tb in range(0,T):
-        dt = epochs[tb+1]-epochs[tb]
+    nRemaining = np.sum(combinedTimes>=0) + 2
+    for tb in range(0,len(epochs)-1):
         Nt = N[tb]
-        epoch = np.array([cumGens,cumGens+dt])
+        epoch = np.array([cumGens,cumGens+1.0])
         
         #grab coal times during epoch
         # calculate coal emission probs
 
         Coals = np.copy(combinedTimes)
         Coals = Coals[Coals > cumGens]
-        Coals = Coals[Coals <= cumGens+dt]
+        Coals = Coals[Coals <= cumGens+1.0]
       
         logl += _log_coal_density(Coals,nRemaining,epoch,1.0,Nt,anc=0)
         nRemaining -= len(Coals)
         
-        cumGens += dt
+        cumGens += 1.0
     return logl
