@@ -5,56 +5,11 @@ from hmm_utils import proposal_density
 from scipy.special import logsumexp
 from scipy.optimize import minimize
 import argparse
-import gzip
 import os
-
-def parse_clues(filename,args):
-    with gzip.open(filename, 'rb') as fp:
-        try:
-            data = fp.read()
-        except OSError:
-            with open(filename, 'rb') as fp:
-                try:
-                    data = fp.read()
-                except OSError:
-                    print('Error: Unable to open ' + filename)
-                    exit(1)
-           
-        #get #mutations and #sampled trees per mutation
-        filepos = 0
-        num_muts, num_sampled_trees_per_mut = np.frombuffer(data[slice(filepos, filepos+8, 1)], dtype = np.int32)
-
-        filepos += 8
-        #iterate over mutations
-        for m in range(0,num_muts):
-            bp = np.frombuffer(data[slice(filepos, filepos+4, 1)], dtype = np.int32)
-            filepos += 4
-            anc, der = np.frombuffer(data[slice(filepos, filepos+2, 1)], dtype = 'c')
-            filepos += 2
-            daf, n = np.frombuffer(data[slice(filepos, filepos+8, 1)], dtype = np.int32)
-            filepos += 8
-            
-            if daf >= n-1:
-            	anctimes = np.empty((num_sampled_trees_per_mut,0))
-            else:
-                num_anctimes = 4*(n-daf-1)*num_sampled_trees_per_mut
-                anctimes     = np.reshape(np.frombuffer(data[slice(filepos, filepos+num_anctimes, 1)], dtype = np.float32), (num_sampled_trees_per_mut, n-daf-1))
-                filepos     += num_anctimes
-            
-            if daf <= 1:
-            	dertimes = np.empty((num_sampled_trees_per_mut,0))
-            else:
-                num_dertimes = 4*(daf-1)*num_sampled_trees_per_mut
-                dertimes     = np.reshape(np.frombuffer(data[slice(filepos, filepos+num_dertimes, 1)], dtype = np.float32), (num_sampled_trees_per_mut, daf-1))
-                filepos     += num_dertimes
-		
-    return dertimes,anctimes
 
 def parse_args():
 	parser = argparse.ArgumentParser()
-	parser.add_argument('--times',type=str,
-		help='Should refer to files <times>.{{der,anc}}.npy (exclude prefix .{{der,anc}}.npy)',
-		default=None)
+	parser.add_argument('--times',type=str, default=None)
 	parser.add_argument('--popFreq',type=float,default=None)
 
 	parser.add_argument('--ancientSamps',type=str,default=None)
@@ -69,30 +24,27 @@ def parse_args():
 	parser.add_argument('--df',type=int,default=400)
 	return parser.parse_args()
 
-def load_times(args):
-	locusDerTimes,locusAncTimes = parse_clues(args.times+'.timeb',args) # no thinning or burn-in.
-	print(locusDerTimes.shape,locusAncTimes.shape)	
-	if locusDerTimes.ndim == 0 or locusAncTimes.ndim == 0:
-		raise ValueError
-	elif locusAncTimes.ndim == 1 and locusDerTimes.ndim == 1:
-		M = 1
-		locusDerTimes = np.transpose(np.array([locusDerTimes]))
-		locusAncTimes = np.transpose(np.array([locusAncTimes]))
-	elif locusAncTimes.ndim == 2 and locusDerTimes.ndim == 1:
-		locusDerTimes = np.array([locusDerTimes])[:,0::1]
-		locusAncTimes = np.transpose(locusAncTimes)[:,0::1]
-		M = locusDerTimes.shape[1]	
-	elif locusAncTimes.ndim == 1 and locusDerTimes.ndim == 2:
-		locusAncTimes = np.array([locusAncTimes])[:,0::1]
-		locusDerTimes = np.transpose(locusDerTimes)[:,0::1]
-		M = locusDerTimes.shape[1]
-	else:
-		locusDerTimes = np.transpose(locusDerTimes)[:,0::1]
-		locusAncTimes = np.transpose(locusAncTimes)[:,0::1]
-		M = locusDerTimes.shape[1]
-	n = locusDerTimes.shape[0] + 1
-	m = locusAncTimes.shape[0] + 1
-	ntot = n + m
+def load_times(readtimes): # these are time on an absolute scale, everything else is ones
+	file1 = open(readtimes, 'r')
+	Lines = file1.readlines()
+	der = Lines[0].split(",")
+	anc = Lines[1].split(",")
+	ancnum = [-1] * (len(anc) - 1)
+	dernum = [-1] * (len(der) - 1)
+	for i in range(len(der) - 1):
+		dernum[i] = float(der[i])
+	for i in range(len(anc) - 1):
+		ancnum[i] = float(anc[i])
+	
+	print(dernum)
+	print(ancnum)
+	locusDerTimes = np.empty((len(dernum), 1)) # no thinning or burn-in
+	locusAncTimes =  np.empty((len(ancnum), 1))
+	M = locusDerTimes.shape[1]
+	ntot = locusDerTimes.shape[0] + locusAncTimes.shape[0] + 2 # why not just completely fill it out???
+	locusDerTimes[:,0] = dernum
+	locusAncTimes[:,0] = ancnum
+
 	row0 = -1.0 * np.ones((ntot,M))
 
 	row0[:locusDerTimes.shape[0],:] = locusDerTimes
@@ -101,13 +53,15 @@ def load_times(args):
 
 	row1[:locusAncTimes.shape[0],:] = locusAncTimes
 	locusTimes = np.array([row0,row1])
+	#locus time is an array that has dimensions 2 by (total number of leaves) by (number of importance samples)
+	#The first row corresponds to the derived alleles. The columns are populated by daf-1 and n-daf-1 entries each, and are then -1 below this value.
 	return locusTimes
 
 def load_data(args):
 		# load coalescence times
 	noCoals = (args.times == None)
 	if not noCoals:
-		times = load_times(args)
+		times = load_times(args.times)
 	else:
 		times = np.zeros((2,0,0))
 	currFreq = args.popFreq
@@ -151,78 +105,75 @@ def load_data(args):
 	return timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq
 
 def likelihood_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
-    S = theta
-    Sprime = np.concatenate((S,[0.0]))
-    if np.any(np.abs(Sprime) > sMax):
-        return np.inf
-
-    sel = Sprime[np.digitize(epochs,timeBins,right=False)-1]
-
-    tShape = times.shape
-    if tShape[2] == 0:
-    	t = np.zeros((2,0))
-    	importanceSampling = False
-    elif tShape[2] == 1:
-    	t = times[:,:,0]
-    	importanceSampling = False
-    else:
-    	importanceSampling = True
-
-    if importanceSampling:
-    	M = tShape[2]
-    	loglrs = np.zeros(M)
-    	for i in range(M):
-    		betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
-    		logl = logsumexp(betaMat[-2,:])
-    		logl0 = proposal_density(times[:,:,i],epochs,N)
-    		loglrs[i] = logl-logl0
-    	logl = -1 * (-np.log(M) + logsumexp(loglrs))
-    else:
-    	betaMat = backward_algorithm(sel,t,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
-    	logl = -logsumexp(betaMat[-2,:])
-    return logl
+	S = theta
+	Sprime = np.concatenate((S,[0.0]))
+	if np.any(np.abs(Sprime) > sMax):
+		return np.inf
+	sel = Sprime[np.digitize(epochs,timeBins,right=False)-1]
+	tShape = times.shape
+	if tShape[2] == 0:
+		t = np.zeros((2,0))
+		importanceSampling = False
+	elif tShape[2] == 1:
+		t = times[:,:,0]
+		importanceSampling = False
+	else:
+		importanceSampling = True
+	if importanceSampling:
+		M = tShape[2]
+		loglrs = np.zeros(M)
+		for i in range(M):
+			betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
+			logl = logsumexp(betaMat[-2,:])
+			logl0 = proposal_density(times[:,:,i],epochs,N)
+			loglrs[i] = logl-logl0
+		logl = -1 * (-np.log(M) + logsumexp(loglrs))
+	else:
+		betaMat = backward_algorithm(sel,t,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
+		logl = -logsumexp(betaMat[-2,:])
+	return logl
 
 def traj_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
-    S = theta
-    Sprime = np.concatenate((S,[0.0]))
-    if np.any(np.abs(Sprime) > sMax):
-        print('WARNING: selection coefficient exceeds bounds. Maybe change --sMax?')
-        return np.inf
+	S = theta
+	Sprime = np.concatenate((S,[0.0]))
+	if np.any(np.abs(Sprime) > sMax):
+		print('WARNING: selection coefficient exceeds bounds. Maybe change --sMax?')
+		return np.inf
 
-    sel = Sprime[np.digitize(epochs,timeBins,right=False)-1]
-    T = len(epochs)
-    F = len(freqs)
-    tShape = times.shape
-    if tShape[2] == 0:
-    	t = np.zeros((2,0))
-    	importanceSampling = False
-    elif tShape[2] == 1:
-    	t = times[:,:,0]
-    	importanceSampling = False
-    else:
-    	importanceSampling = True
+	sel = Sprime[np.digitize(epochs,timeBins,right=False)-1]
+	T = len(epochs)
+	F = len(freqs)
+	tShape = times.shape
+	if tShape[2] == 0:
+		t = np.zeros((2,0))
+		importanceSampling = False
+	elif tShape[2] == 1:
+		t = times[:,:,0]
+		importanceSampling = False
+	else:
+		importanceSampling = True
 
-    if importanceSampling:
-    	M = tShape[2]
-    	loglrs = np.zeros(M)
-    	postBySamples = np.zeros((F,T-1,M))
-    	for i in range(M):
-    		betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,np.array([]),noCoals=noCoals,currFreq=currFreq)
-    		alphaMat = forward_algorithm(sel,times[:,:,i],epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals)
-    		logl = logsumexp(betaMat[-2,:])
-    		logl0 = proposal_density(times[:,:,i],epochs,N)
-    		loglrs[i] = logl-logl0
-    		postBySamples[:,:,i] = (alphaMat[1:,:] + betaMat[:-1,:]).transpose()
-    	post = logsumexp(loglrs + postBySamples,axis=2)
-    	post -= logsumexp(post,axis=0)
+	if importanceSampling:
+		M = tShape[2]
+		loglrs = np.zeros(M)
+		postBySamples = np.zeros((F,T-1,M))
+		for i in range(M):
+			betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,np.array([]),noCoals=noCoals,currFreq=currFreq)
+			alphaMat = forward_algorithm(sel,times[:,:,i],epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals)
+			logl = logsumexp(betaMat[-2,:])
+			logl0 = proposal_density(times[:,:,i],epochs,N)
+			loglrs[i] = logl-logl0
+			postBySamples[:,:,i] = (alphaMat[1:,:] + betaMat[:-1,:]).transpose()
+		post = logsumexp(loglrs + postBySamples,axis=2)
+		post -= logsumexp(post,axis=0)
 
-    else:
-    	post = np.zeros((F,T))
-    	betaMat = backward_algorithm(sel,t,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
-    	alphaMat = forward_algorithm(sel,t,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals)
-    	post = (alphaMat[1:,:] + betaMat[:-1,:]).transpose()
-    	post -= logsumexp(post,axis=0)
-    return post
+	else:
+		post = np.zeros((F,T))
+		betaMat = backward_algorithm(sel,t,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
+		alphaMat = forward_algorithm(sel,t,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals)
+		post = (alphaMat[1:,:] + betaMat[:-1,:]).transpose()
+		post -= logsumexp(post,axis=0)
+	return post
 
 if __name__ == "__main__":
 	args = parse_args()
