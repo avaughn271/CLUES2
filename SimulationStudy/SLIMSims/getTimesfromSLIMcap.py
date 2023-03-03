@@ -78,5 +78,5 @@ for time in DerTimes[0:B]:
     DerString = DerString + str(time) + ","
 f = open("Times.txt", "w")
 
-f.writelines(DerString+ "\n" + AncString + "\n")
+f.writelines(DerString[0:(len(DerString)-1)]+ "\n" + AncString[0:(len(AncString)-1)] + "\n") # added indexing to remove comma at the end
 f.close()
