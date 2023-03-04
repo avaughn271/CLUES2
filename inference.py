@@ -4,6 +4,7 @@ from hmm_utils import backward_algorithm
 from hmm_utils import proposal_density
 from scipy.special import logsumexp
 from scipy.optimize import minimize
+import scipy.stats as stats
 import argparse
 import os
 
@@ -92,9 +93,8 @@ def load_data(args):
 	else:
 		Ne = args.N * np.ones(int(tCutoff))
 	# set up freq bins
-	c = 1/(2*np.min([Ne[0],100000]))
-	df = args.df
-	freqs = np.linspace(c,1-c,df)
+	beta05quantiles = np.genfromtxt(os.path.dirname(__file__) + '/utils/Beta05Quantiles.txt')
+	freqs = np.quantile(beta05quantiles, np.linspace(0.0, 1.0, args.df))
 	# load time bins (for defining selection epochs)
 	if args.timeBins != None:
 		timeBins = np.genfromtxt(args.timeBins)
