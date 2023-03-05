@@ -3,16 +3,37 @@ from numba import njit
 
 @njit('float64(float64[:])',cache=True)
 def _logsumexp(a):
+    """Standard logsumexp
+    INPUT: a - vector of log probabilities
+    OUTPUT: a number corresponding to log[exp(a1) + ... + exp(an)] but more stably computed
+    """
+
     a_max = np.max(a)
     return np.log(np.sum(np.exp(a - a_max))) + a_max
 
 @njit('float64(float64[:],float64[:])',cache=True)
 def _logsumexpb(a,b):
+    """Standard logsumexp
+    INPUT: a - vector of log probabilities
+           b - a vector of elements
+    OUTPUT: a number corresponding to log[b1*exp(a1) + ... + bn*exp(an)] but more stably computed
+    """
     a_max = np.max(a)
     return np.log(np.sum(b * np.exp(a - a_max))) + a_max
 
 @njit('float64[:](int64,float64,float64,float64[:],float64[:],float64[:],float64[:])',cache=True)
 def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf):
+    """Standard logsumexp
+    INPUT: i - an index. ranges from 0 to df-1 inclusive. Index of frequency bin
+           N - diploid effective popualtion size (smaller one)
+           s - selection coefficient
+           FREQS - frequency discrete values as computed earlier
+           z_bins - some numbers spread between -1e5 and 1e5, more concentrated near 0. Length of 2198.
+           z_logcdf - log of standard normal CDF of z_bins
+           z_logsf - log of (1 - standard normal CDF) of z_bins
+    OUTPUT: TBDDDD
+    """
+
 	# 1-generation transition prob based on Normal distn
 	
     p = FREQS[i]
@@ -48,6 +69,7 @@ def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf):
 
 @njit('float64[:,:](float64,float64,float64[:],float64[:],float64[:],float64[:])',cache=True)
 def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf):
+	print(s)
 	lf = len(FREQS)
 	p1 = np.zeros((lf,lf))
 

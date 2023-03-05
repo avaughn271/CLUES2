@@ -4,11 +4,11 @@ from hmm_utils import backward_algorithm
 from hmm_utils import proposal_density
 from scipy.special import logsumexp
 from scipy.optimize import minimize
-import scipy.stats as stats
 import argparse
 import os
 
 def parse_args():
+	"""Define the Arguments"""
 	parser = argparse.ArgumentParser()
 	parser.add_argument('--times',type=str, default=None)
 	parser.add_argument('--popFreq',type=float,default=None)
@@ -25,7 +25,23 @@ def parse_args():
 	parser.add_argument('--df',type=int,default=400)
 	return parser.parse_args()
 
-def load_times(readtimes): # these are time on an absolute scale, everything else is ones
+def load_times(readtimes):
+	"""Load in the coalescent times
+    INPUT: readtimes - this is the file name of coalescence times
+           times are given on an absolute scale.
+	   Line 1 is coalescence times of derived lineages
+	   Line 2 is coalescence times of ancestral lineages
+	   This is repeated for each important sample
+	   If there are A derived coalescences, there are A + 1 derived samples
+	   If there are B ancestral coalescences, there are B ancestral samples
+
+    OUTPUT: A numpy array of dimension (2,A+B, numberimportancesamples)
+    #NEED TO DOUBLE CHECK WITH PAPER FOR HOW MIXED ANCESTRAL IS TAKEN INTO ACCOUNT AND HOW
+    YOU FILTER TIMES.
+    For the first dimension of the output, you populate it with the first B-1 of the B coalescences
+    For the second dimension of the output, you populate it with the first A-1 of the A coalescences
+    All of the other entries are -1.
+    """
 	file1 = open(readtimes, 'r')
 	Lines = file1.readlines()
 	M = int(len(Lines) / 2)
@@ -45,20 +61,31 @@ def load_times(readtimes): # these are time on an absolute scale, everything els
 		locusDerTimes[:,0] = dernum
 		locusAncTimes[:,0] = ancnum
 
-	row0 = -1.0 * np.ones((ntot,M))
+	dertimes = -1.0 * np.ones((ntot,M))
 
-	row0[:locusDerTimes.shape[0],:] = locusDerTimes
+	dertimes[:locusDerTimes.shape[0],:] = locusDerTimes
 
-	row1 = -1.0 * np.ones((ntot,M))
+	anctimes = -1.0 * np.ones((ntot,M))
 
-	row1[:locusAncTimes.shape[0],:] = locusAncTimes
-	locusTimes = np.array([row0,row1])
+	anctimes[:locusAncTimes.shape[0],:] = locusAncTimes
+	return(np.array([dertimes,anctimes]))
 	#locus time is an array that has dimensions 2 by (total number of leaves) by (number of importance samples)
 	#The first row corresponds to the derived alleles. The columns are populated by daf-1 and n-daf-1 entries each, and are then -1 below this value.
-	return locusTimes
 
 def load_data(args):
-		# load coalescence times
+	"""Takes in arguments.
+	Returns:
+	timeBins - if tcutoff given, this is [0.0, tcutoff]. If bins specified, use them instead.
+	times - the output of load_times. or 0 if none specified
+	epochs - [0, ..., tcutoff - 1]
+	Ne - [Ne] * tcutoff or equivalent if coal is given. This is haploid size (larger one)!
+	freqs - array of increasing numbers from 0 to 1 exclusive. Length is args.df 
+	ancientGLs - matrix of log proabilities of observations. First column is times. 
+	             Second is homo anc. Last is homo derived. All 0 if not specified
+	ancientHapGLs - matrix of zeros.
+	noCoals - True if times not specified. False otherwise.
+	currFreq - user specified modern derived allele frequency.
+	"""
 	noCoals = (args.times == None)
 	if not noCoals:
 		times = load_times(args.times)
@@ -100,7 +127,6 @@ def load_data(args):
 		timeBins = np.genfromtxt(args.timeBins)
 	else:
 		timeBins = np.array([0.0,tCutoff])
-
 	return timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq
 
 def likelihood_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
