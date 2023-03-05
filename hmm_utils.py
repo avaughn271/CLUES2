@@ -31,22 +31,24 @@ def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf):
            z_bins - some numbers spread between -1e5 and 1e5, more concentrated near 0. Length of 2198.
            z_logcdf - log of standard normal CDF of z_bins
            z_logsf - log of (1 - standard normal CDF) of z_bins
-    OUTPUT: TBDDDD
+    OUTPUT: The set of len(FREQS) transition probabilities.
+    conceptually, you calculate the resulting normal distribution. Any density greater than FREQS[df] is places on FREQS[df] 
+    Any probability mass less than FREQS[0] is placed on FREQS[0] Otherwise, midpoints between frequency bins are used
+    to round the resulting probability into a discrete bucket using the cdf.
     """
-
 	# 1-generation transition prob based on Normal distn
 	
-    p = FREQS[i]
-    lf = len(FREQS)
-    logP = np.NINF * np.ones(lf)
-    mu = p-s*p*(1.0-p) # this is the only place where dominance or frequency changes come in 
+    p = FREQS[i]    #starting frequency
+    lf = len(FREQS)  # number of freq bins
+    logP = np.NINF * np.ones(lf)  # initialize logP
+    mu = p-s*p*(1.0-p) # this is the only place where dominance or selection changes come in 
     #            This should be the inverse of (x+sx)/(1+sx)
-    sigma = np.sqrt(p*(1.0-p)/(4.0*N))
+    # This is the mean of the normal distribution going back in time.
+    sigma = np.sqrt(p*(1.0-p)/(4.0*N)) # variance of the normal approx
 
-    pi0 = np.interp(np.array([(FREQS[0]-mu)/sigma]),z_bins,z_logcdf)[0]
-    pi1 = np.interp(np.array([(FREQS[lf-1]-mu)/sigma]),z_bins,z_logsf)[0]
+    logP[0] = np.interp(np.array([(FREQS[0]-mu)/sigma]),z_bins,z_logcdf)[0]
+    logP[lf-1] = np.interp(np.array([(FREQS[lf-1]-mu)/sigma]),z_bins,z_logsf)[0]
 
-    middleP = np.zeros(lf-2)
     for j in range(1,lf-1):
         if j == 1:
             mlo = FREQS[0]
@@ -59,17 +61,17 @@ def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf):
 
         l1 = np.interp(np.array([(mlo-mu)/sigma]),z_bins,z_logcdf)[0]
         l2 = np.interp(np.array([(mhi-mu)/sigma]),z_bins,z_logcdf)[0]
-        middleP[j-1] = _logsumexpb(np.array([l1,l2]),np.array([-1.0,1.0]))                    
-
-    logP[0] = pi0
-    logP[1:lf-1] = middleP
-    logP[lf-1] = pi1
+        logP[j] = _logsumexpb(np.array([l1,l2]),np.array([-1.0,1.0]))
 
     return logP
 
 @njit('float64[:,:](float64,float64,float64[:],float64[:],float64[:],float64[:])',cache=True)
 def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf):
-	print(s)
+	"""Same input as before, except i.
+    Performs the above calculation on all possible input frequencies p.
+    Output - A square matrix p1 of size df by df. Here p1[i,j] is the probability density
+    backwards in time between the frequency index i to the frequency index j.
+    """
 	lf = len(FREQS)
 	p1 = np.zeros((lf,lf))
 
@@ -89,7 +91,12 @@ def _hap_genotype_likelihood_emission(ancGLs,p):
 
 @njit('float64(float64[:],float64)')
 def _genotype_likelihood_emission(ancGLs,p):
-	logGenoFreqs = np.array([2*np.log(1-p),np.log(2) + np.log(p) + np.log(1-p),2*np.log(p)])
+	"""ancGLs is a list of size 3. p is the derived allele frequency.
+	Returns the probability of the given emission"""
+	logp = np.log(p)
+	log1p = np.log(1-p)
+
+	logGenoFreqs = np.array([log1p + log1p, 0.693147180559945309 + logp + log1p,logp + logp])
 	emission = _logsumexp(logGenoFreqs + ancGLs)
 	if np.isnan(emission):
 		emission = -np.inf
