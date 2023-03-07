@@ -136,11 +136,7 @@ def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGL
     '''
     
     lf = len(freqs)    
-    # neutral sfs
-    alpha = -np.log(freqs) 
-    binEdges = np.array([0]+[0.5*(freqs[i]+freqs[i+1]) for i in range(len(freqs)-1)]+[1])
-    alpha += np.log(np.diff(binEdges))
-	
+    alpha = np.ones(len(freqs)) # uniform probability of exiting at furthest time point.
     alpha -= _logsumexp(alpha)
     
     T = len(epochs)-1
@@ -219,13 +215,16 @@ def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientG
     
     lf = len(freqs)
     alpha = np.zeros(lf)
-    if currFreq != -1:
-        nsamp = 1000
-        for i in range(lf):
-            k = int(currFreq*nsamp)
-            alpha[i] = -np.sum(np.log(np.arange(2,k+1)))-np.sum(np.log(np.arange(2,nsamp-k+1)))+np.sum(np.log(np.arange(2,nsamp+1)))
-            alpha[i] += k*np.log(freqs[i]) + (nsamp-k)*np.log(1-freqs[i])
-            
+    indexofcurrent = -1
+    maxdistance = 2.0
+    for i in range(lf):
+        distt = abs(freqs[i] - currFreq) 
+        alpha[i] = -1e20
+        if distt < maxdistance:
+             maxdistance = distt
+             indexofcurrent = i
+    alpha[indexofcurrent] = 0.0 # index of all -Infs except freq bin closest to the true current freq
+
     T = len(epochs)-1
     alphaMat = np.zeros((T+1,lf))
     alphaMat[0,:] = alpha
