@@ -37,7 +37,6 @@ def load_data(args):
 	noCoals - True if times not specified. False otherwise.
 	currFreq - user specified modern derived allele frequency.
 	"""
-	noCoals = True
 	currFreq = args.popFreq
 
 	# load ancient samples/genotype likelihoods
@@ -49,10 +48,7 @@ def load_data(args):
 	# load ancient haploid genotype likelihoods
 	ancientHapGLs = np.zeros((0,3))
 
-	if noCoals:
-		tCutoff = np.max(ancientGLs[:,0])+1.0
-	else:
-		tCutoff = args.tCutoff
+	tCutoff = np.max(ancientGLs[:,0])+1.0
 
 	epochs = np.arange(0.0,tCutoff,int(1))
 	# loading population size trajectory
@@ -71,19 +67,19 @@ def load_data(args):
 		timeBins = np.genfromtxt(args.timeBins)
 	else:
 		timeBins = np.array([0.0,tCutoff])
-	return timeBins,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq
+	return timeBins,epochs,Ne,freqs,ancientGLs,ancientHapGLs,currFreq
 
-def likelihood_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
+def likelihood_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,currFreq,sMax):
 	Sprime = np.concatenate((theta,[0.0]))
 	if np.any(np.abs(Sprime) > sMax):
 		return np.inf
 	sel = Sprime[np.digitize(epochs,timeBins,right=False)-1]
 
-	betaMat = backward_algorithm(sel,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
-	logl = -logsumexp(betaMat[-2,:])
+	betaMat = backward_algorithm(sel,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,currFreq=currFreq)
+	logl = -logsumexp(betaMat[-1,:])
 	return logl
 
-def traj_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
+def traj_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,currFreq,sMax):
 	S = theta
 	Sprime = np.concatenate((S,[0.0]))
 	if np.any(np.abs(Sprime) > sMax):
@@ -92,9 +88,9 @@ def traj_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs
 
 	sel = Sprime[np.digitize(epochs,timeBins,right=False)-1]
 
-	betaMat = backward_algorithm(sel,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
-	alphaMat = forward_algorithm(sel,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals)
-	post = (alphaMat[1:,:] + betaMat[:-1,:]).transpose()
+	betaMat = backward_algorithm(sel,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,currFreq=currFreq)
+	alphaMat = forward_algorithm(sel,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs)
+	post = (alphaMat + betaMat).transpose()
 	post -= logsumexp(post,axis=0)
 	return post
 
@@ -102,17 +98,15 @@ if __name__ == "__main__":
 	args = parse_args()
 	if args.ancientSamps == None:
 		print('You need to supply ancient samples (--ancientSamps)')
-	
 	# load data and set up model
 	sMax = args.sMax
-	timeBins,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq = load_data(args)
+	timeBins,epochs,Ne,freqs,ancientGLs,ancientHapGLs,currFreq = load_data(args)
 	# read in global Phi(z) lookups
 	z_bins = np.genfromtxt(os.path.dirname(__file__) + '/utils/z_bins.txt')
 	z_logcdf = np.genfromtxt(os.path.dirname(__file__) + '/utils/z_logcdf.txt')
 	z_logsf = np.genfromtxt(os.path.dirname(__file__) + '/utils/z_logsf.txt')
 
 	Ne *= 1/2
-	noCoals = int(noCoals)
 
 	# optimize over selection parameters
 	T = len(timeBins)
@@ -131,9 +125,9 @@ if __name__ == "__main__":
 		raise ValueError
 
 	opts['initial_simplex']=Simplex
-	logL0 = likelihood_wrapper(S0,timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
+	logL0 = likelihood_wrapper(S0,timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,currFreq,sMax)
 
-	minargs = (timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
+	minargs = (timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,currFreq,sMax)
 	res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
 
 	toprint = []
@@ -144,7 +138,7 @@ if __name__ == "__main__":
 		toprint.append('%d-%d\t%.5f'%(t,u,s)+ "\n")
 
 	# infer trajectory @ MLE of selection parameter
-	post = traj_wrapper(res.x,timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
+	post = traj_wrapper(res.x,timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,currFreq,sMax)
 	
 	f = open(args.out+"_inference.txt", "w+")
 	f.writelines(toprint)

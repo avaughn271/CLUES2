@@ -94,8 +94,8 @@ def _genotype_likelihood_emission(ancGLs,p):
 		emission = -np.inf
 	return emission
 
-@njit('float64[:,:](float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64)',cache=True)
-def forward_algorithm(sel,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1):
+@njit('float64[:,:](float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:])',cache=True)
+def forward_algorithm(sel,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs):
 
     '''
     Moves forward in time from past to present
@@ -103,21 +103,18 @@ def forward_algorithm(sel,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,anci
     
     lf = len(freqs)
     # neutral sfs
-    alpha = -np.log(freqs)
-    binEdges = np.array([0]+[0.5*(freqs[i]+freqs[i+1]) for i in range(len(freqs)-1)]+[1])
-    alpha += np.log(np.diff(binEdges))
-	
+    alpha = np.ones(len(freqs))
     alpha -= _logsumexp(alpha)
     
     T = len(epochs)-1
-    alphaMat = np.zeros((T+1,lf))
+    alphaMat = np.zeros((T,lf))
     alphaMat[-1,:] = alpha
 
     prevNt = -1
     prevst = -1
     
     cumGens = epochs[-1]
-    for tb in range(T-1,0,-1):
+    for tb in range(T-2,-1,-1):
         Nt = N[tb]
         
         st = sel[tb]
@@ -150,25 +147,25 @@ def forward_algorithm(sel,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,anci
         alphaMat[tb,:] = alpha
     return alphaMat
     
-@njit('float64[:,:](float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64,float64)',cache=True)
-def backward_algorithm(sel,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1,currFreq=-1):
+@njit('float64[:,:](float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64)',cache=True)
+def backward_algorithm(sel,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,currFreq=-1):
 
     '''
     Moves backward in time from present to past
     '''
-    
     lf = len(freqs)
     alpha = np.zeros(lf)
-    if currFreq != -1:
-        nsamp = 1000
-        for i in range(lf):
-            k = int(currFreq*nsamp)
-            alpha[i] = -np.sum(np.log(np.arange(2,k+1)))-np.sum(np.log(np.arange(2,nsamp-k+1)))+np.sum(np.log(np.arange(2,nsamp+1)))
-            alpha[i] += k*np.log(freqs[i]) + (nsamp-k)*np.log(1-freqs[i])
-            
+    indexofcurrent = -1
+    maxdistance = 2.0
+    for i in range(lf):
+        distt = abs(freqs[i] - currFreq) 
+        alpha[i] = -1e20
+        if distt < maxdistance:
+             maxdistance = distt
+             indexofcurrent = i
+    alpha[indexofcurrent] = 0.0 # index of all -Infs except freq bin closest to the true current freq
     T = len(epochs)-1
-    alphaMat = np.zeros((T+1,lf))
-    alphaMat[0,:] = alpha
+    alphaMat = np.zeros((T,lf))
     
     prevNt = -1
     prevst = -1
@@ -185,10 +182,6 @@ def backward_algorithm(sel,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,anc
         #grab ancient GL rows
         ancientGLrows = ancientGLs[ancientGLs[:,0] > cumGens]
         ancientGLrows = ancientGLrows[ancientGLrows[:,0] <= cumGens + 1.0]
-
-        ancientHapGLrows = ancientHapGLs[ancientHapGLs[:,0] > cumGens]
-        ancientHapGLrows = ancientHapGLrows[ancientHapGLrows[:,0] <= cumGens + 1.0]
-
         glEmissions = np.zeros(lf)
         for j in range(lf):
             for iac in range(ancientGLrows.shape[0]):
