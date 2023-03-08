@@ -1,0 +1,78 @@
+\documentclass{article}
+\title{Importance Sampling Write-up}
+\author{Andrew Vaughn}
+\date{}
+\setlength{\parindent}{28pt}
+\pdfpagewidth 8.5in
+\pdfpageheight 11in
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[pdftex]{graphicx}
+\usepackage[margin=2cm]{caption}
+\usepackage[utf8]{inputenc}
+\addtolength{\oddsidemargin}{-.875in}
+\addtolength{\evensidemargin}{-.875in}
+\addtolength{\textwidth}{1.75in}
+\addtolength{\topmargin}{-.875in}
+\addtolength{\textheight}{1.75in} 
+\begin{document}
+\maketitle
+
+\section {General Importance Sampling}
+We consider trying to maximize the value
+ \begin{eqnarray}
+L(s) &=&  P(D | s )  \\
+&=&  \int   P(D,G|s)   dG   \\ 
+ &=&    E_{G | D, s_0} \left   [\frac{P(D ,  G | s ) }{    P(G|D, s _ 0)     } \right]   
+\end{eqnarray}
+
+We divide this expression through by $$ L(s _ 0) =  P(D | s _ 0  )  $$ to get 
+
+ \begin{eqnarray}
+ \frac{  L(s)}{L(s_0)} &=&    E_{G | D, s_0} \left   [\frac{P(D ,  G| s)    }{    P(D,G| s_0)    } \right]      \\ 
+  &=&       E_{G | D, s_0 } \left   [\frac{P(D |  G, s)P(G|s)   }{  P(D |  G, s_0)P(G|s_0)   } \right]    
+  % &=&      E_{G | D, s_0 , T} \left   [\frac{P(D |  G, T, X_0)P(G|s, T, X_0)   }{  P(D |  G, T, X_0)P(G|s=0, T, X_0)   } \right]   \\
+% &=&       E_{G | D, s_0,   T} \left   [\frac{ P(G|s, T, X_0)   }{   P(G|s=0, T, X_0)   } \right]     
+  \end{eqnarray}
+
+    
+%    If we assume that the tree outside of position $k$ is independent of the selection coefficient at $k$ given the local tree at position $k$, then this becomes
+  %    $$ E_{G | D, s_0} \left   [\frac{ P(G|s)   }{   P(G|s=0)   } \right]      = E_{G | D, s_0} \left   [\frac{ P(G_{\not k}  |G_k, s) P(G_k|s)  }{   P(G_{\not k}  |G_k, s=0) P(G_k|s=0)    } \right]    $$ $$\approx   E_{G | D, s_0} \left   [\frac{ P(G_{\not k}  |G_k ) P(G_k|s)  }{   P(G_{\not k}  |G_k ) P(G_k|s=0)    } \right] =
+    %   E_{G | D, s_0} \left   [\frac{   P(G_k|s)  }{    P(G_k|s=0)    } \right]    $$
+    We then assume the data are independent of the ARG given the selection coefficient (should check theory on whether this is always true or not). Therefore, this becomes
+    $$   E_{G | D, s_0 } \left   [\frac{ P(G|s)   }{   P(G|s_0)   } \right]    $$
+    We then replace this with the local tree $T$ to obtain the importance sampling estimate of the log likelihood ratio
+    
+    $$  \frac 1 M \sum _{m=1} ^M      \frac{ P(T _m |s)   }{   P(T _m| s_0)   }$$
+    where $G_m$ is sampled from $P(G|D,s_0)$.
+    
+    
+    We now consider the coalescence process $ P(C|X,N) = \prod _{i=0}^{K-1}   P(C_{i+1}  | C_i X_i,N_i ) $ where $X_i$ is the derived allele frequency at time $i$.
+    
+    Tavare formula for this??
+    
+    Then, we obtain the following formula
+    
+    P(C|s ) = \sum_{x \in \mathcal X}   P(C| X=x) P(X= x|s)
+      
+      If the times are all sampled at the present then both    $ P(  L|s, \Theta)  $ and    $   P(  L|s_0, \Theta)  $ depend only on $X_0$ and not on $s$ or $s_0$. Therefore, these terms cancel. However, if the leaves are sampled at ancient time points, then we need 
+      to consider the probability of seeing the given allelic state, which should be a simple binomial.
+      
+  \section {Coalescent model for a site under selection}
+  $X(t)$ is the derived allele frequency. $N(t)$ is the effective population size, indexed by time before the present.
+  
+  $C = (C^{der}, C ^{anc} , C^{mix})$ where $C^{der}$ is coalescence between derived allele classes,  $C^{anc}$ is coalescence between ancestral allele classes, and $C^{mix}$ is coalescence before the mutation (includes all uncoalesced ancestral plus exactly one derived lineage). We consider Tavare's descent formula and take discrete timepoints. Let $K$ be the absolute maximum time interval.
+  
+  $$P(C| X, N ) = \prod _{i=0} ^ {\tau -1}  P(C^{der} _{i+1}  |  C  ^{der}  _i     , X_i , N_i)    P(C^{anc} _{i+1}  |  C  ^{anc}  _i  , X_i , N_i)   \times
+  \prod _ { i= \tau }    ^{K-1}  P( C_{i +1 }   ^{mix}     |  C    _i  ^{mix}   , N_i )    $$
+  
+  
+  We have that 
+%  $$ P(  \mathcal T   | L ,  s ,\Theta  ) = \sum _{X \in \mathcal X}    P(  \mathcal T  | s, X, L , \Theta     ) P(X|s, L , \Theta )   =       \sum _{X \in \mathcal X}    P(   \mathcal T  |  X, L , \Theta ) P(X|s, L , \Theta )   $$
+        $$ P(  \mathcal T , L   |  s ,\Theta  ) = \sum _{X \in \mathcal X}    P(  \mathcal T  , L | s, X, \Theta     ) P(X|s , \Theta )   =       \sum _{X \in \mathcal X}    P(   \mathcal T ,  L   |  X,  \Theta ) P(X|s,  \Theta ) 
+        =       \sum _{X \in \mathcal X}    P(     L   |  X,  \Theta )   P(   \mathcal T   |   L ,X,  \Theta )        P(X|s,  \Theta )   $$
+        
+        
+        so we have to affect both the coalescence  process by adding the relevant lineages back in. We also have to do the emissions of the leaf samples at the ancient time points. See where these things happen and edit them. 
+
+\end{document}
