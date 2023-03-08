@@ -3,6 +3,16 @@
 ## Purpose
 CLUES is a program to infer selection coefficients, evaluate the statistical evidence for selection, and reconstruct historic allele frequencies. CLUES was originally developed by Aaron Stern (see the original paper [here](https://doi.org/10.1371/journal.pgen.1008384)) and is currently maintained by [Andrew Vaughn](https://nielsen-lab.github.io/team/andrew-vaughn) as CLUES2.0. Please report any strange results, errors, or code suggestions to him at [ahv36@berkeley.edu](mailto:ahv36@berkeley.edu). If you use this program, please cite: [Stern, *et al.* Plos Gen. (2019)](https://doi.org/10.1371/journal.pgen.1008384).
 
+WORK TO DO:
+The basic forward backward algorith has been verified. Works well for frequencies, but we now changed the start and end state transitions.
+
+1) Check how it works for true phylogenies with no importance sampling
+    -check handling of coalescences, including of the mixed processes. In theory the mixed coalescence should be the last coalescence we need to consider. All other should be ancestral. derived allele freq must be in lowest class for this coalescence to happen.
+2) then check how it works for importance sampling, including checking the proposal density function (why not just comopute same likelihood with s=0. hmmmm.)
+3) then, add the emissions of the args on ancient data, only part that needs to change are the emissions.
+
+-check coverage probability of the trajectories. Do many independent replicates and pick random point in time. Coverage of all the pooled samples should match up.
+
 
 ## Installation
 
