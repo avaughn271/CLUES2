@@ -11,6 +11,8 @@ The basic forward backward algorith has been verified. Works well for frequencie
 2) then check how it works for importance sampling, including checking the proposal density function (why not just comopute same likelihood with s=0. hmmmm.)
 3) then, add the emissions of the args on ancient data, only part that needs to change are the emissions.
 
+In terms of improving speed, precompute a lot of the logs and exps.
+
 -check coverage probability of the trajectories. Do many independent replicates and pick random point in time. Coverage of all the pooled samples should match up.
 
 
