@@ -259,9 +259,7 @@ def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientG
         st = sel[tb]
         prevAlpha = np.copy(alpha)
         if prevNt != Nt or prevst != st:
-            print("start")
             currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)
-            print("end")
             upperindex = np.zeros(lf)
             lowerindex = np.zeros(lf)
             for ii in range(lf):
@@ -302,11 +300,6 @@ def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientG
                     coalEmissions[j] += _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,anc=1)
             nDerRemaining -= len(derCoals)
             nAncRemaining -= len(ancCoals)
-        
-
-
-
-
 
         for i in range(len(freqs)):
             alpha[i] = _logsumexp(prevAlpha[lowerindex[i]:upperindex[i]] + currTrans[lowerindex[i]:upperindex[i],i]) + glEmissions[i] + coalEmissions[i]
@@ -314,7 +307,6 @@ def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientG
                 alpha[i] = -np.inf
         prevNt = Nt
         prevst = st
-        
         cumGens += 1.0
         alphaMat[tb,:] = alpha
     return alphaMat

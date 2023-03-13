@@ -3,7 +3,7 @@ from hmm_utils import forward_algorithm
 from hmm_utils import backward_algorithm
 from hmm_utils import proposal_density
 from scipy.special import logsumexp
-from scipy.optimize import minimize
+from scipy.optimize import minimize, minimize_scalar
 import argparse
 import os
 
@@ -158,6 +158,9 @@ def likelihood_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,anc
 		logl = -logsumexp(betaMat[-2,:])
 	return logl
 
+def likelihood_wrapper_scalar(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
+	return(likelihood_wrapper([theta],timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax))
+
 def traj_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
 	S = theta
 	Sprime = np.concatenate((S,[0.0]))
@@ -239,22 +242,28 @@ if __name__ == "__main__":
 	if times.shape[2] > 1:
 		print('\t(Importance sampling with M = %d Relate samples)'%(times.shape[2]))
 		print()
-	print("done")
-	minargs = (timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
-	res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
 
-	S = res.x
-	L = res.fun
+
+	minargs = (timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
+
+	if len(S0) == 1:
+		res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [-0.1,0.0,0.1],args=minargs, method = "Brent", tol = 1e-4))
+		S = [res.x] ###look into what the tolerance means for the convergence algorithm.
+		L = res.fun
+	else:
+		res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
+		S = res.x
+		L = res.fun
 
 	toprint = []
 
-	toprint.append('logLR: %.4f'%(-res.fun+logL0) + "\n")
+	toprint.append('logLR: %.4f'%(-L+logL0) + "\n")
 	toprint.append('Epoch\tSelection MLE'+ "\n")
 	for s,t,u in zip(S,timeBins[:-1],timeBins[1:]):
 		toprint.append('%d-%d\t%.5f'%(t,u,s)+ "\n")
 
 	# infer trajectory @ MLE of selection parameter
-	post = traj_wrapper(res.x,timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
+	post = traj_wrapper(S,timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
 	
 	f = open(args.out+"_inference.txt", "w+")
 	f.writelines(toprint)
