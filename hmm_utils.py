@@ -49,7 +49,13 @@ def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf):
     logP[0] = np.interp(np.array([(FREQS[0]-mu)/sigma]),z_bins,z_logcdf)[0]
     logP[lf-1] = np.interp(np.array([(FREQS[lf-1]-mu)/sigma]),z_bins,z_logsf)[0]
 
-    for j in range(1,lf-1):
+    maximumabsolutefrequencychangepergeneration = 0.05
+    lowerfrequencybound = mu - maximumabsolutefrequencychangepergeneration
+    upperfrequnecybound = mu + maximumabsolutefrequencychangepergeneration
+    lowerindex = np.argmin(np.abs(np.subtract(FREQS, lowerfrequencybound)))
+    upperindec = np.argmin(np.abs(np.subtract(FREQS, upperfrequnecybound)))
+
+    for j in range(max(lowerindex,1),min(lf-1, upperindec)):
         if j == 1:
             mlo = FREQS[0]
         else:
@@ -62,7 +68,6 @@ def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf):
         l1 = np.interp(np.array([(mlo-mu)/sigma]),z_bins,z_logcdf)[0]
         l2 = np.interp(np.array([(mhi-mu)/sigma]),z_bins,z_logcdf)[0]
         logP[j] = _logsumexpb(np.array([l1,l2]),np.array([-1.0,1.0]))
-
     return logP
 
 @njit('float64[:,:](float64,float64,float64[:],float64[:],float64[:],float64[:])',cache=True)
@@ -78,7 +83,6 @@ def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf):
 	# load rows into p1
 	for i in range(lf):
 		p1[i,:] = _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf)
-
 	return(p1)
 
 @njit('float64(float64[:],float64)')
@@ -164,6 +168,15 @@ def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGL
         if prevNt != Nt or prevst != st:
             #change in selection/popsize, recalc trans prob
             currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)
+            upperindex = np.zeros(lf)
+            lowerindex = np.zeros(lf)
+            for ii in range(lf):
+                p = freqs[ii]
+                maximumabsolutefrequencychangepergeneration = 0.05
+                lowerfrequencybound = p - maximumabsolutefrequencychangepergeneration
+                upperfrequnecybound = p + maximumabsolutefrequencychangepergeneration
+                lowerindex[ii] = max(0,np.argmin(np.abs(np.subtract(freqs, lowerfrequencybound))))
+                upperindex[ii] = min(np.argmin(np.abs(np.subtract(freqs, upperfrequnecybound))),len(freqs))
         
         #grab ancient GL rows
         ancientGLrows = ancientGLs[np.logical_and(ancientGLs[:,0] <= cumGens, ancientGLs[:,0] > cumGens - 1.0)]
@@ -196,7 +209,7 @@ def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGL
                     coalEmissions[j] += _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,anc=1)
 
         for i in range(lf):
-            alpha[i] = _logsumexp(prevAlpha + currTrans[i,:] + glEmissions + coalEmissions) 
+            alpha[i] = _logsumexp(prevAlpha[lowerindex[i]:upperindex[i]] + currTrans[i,lowerindex[i]:upperindex[i]] + glEmissions[lowerindex[i]:upperindex[i]] + coalEmissions[lowerindex[i]:upperindex[i]])
             if np.isnan(alpha[i]):
                 alpha[i] = -np.inf
         
@@ -246,8 +259,19 @@ def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientG
         st = sel[tb]
         prevAlpha = np.copy(alpha)
         if prevNt != Nt or prevst != st:
+            print("start")
             currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)
-        
+            print("end")
+            upperindex = np.zeros(lf)
+            lowerindex = np.zeros(lf)
+            for ii in range(lf):
+                p = freqs[ii]
+                maximumabsolutefrequencychangepergeneration = 0.05
+                lowerfrequencybound = p - maximumabsolutefrequencychangepergeneration
+                upperfrequnecybound = p + maximumabsolutefrequencychangepergeneration
+                lowerindex[ii] = max(0,np.argmin(np.abs(np.subtract(freqs, lowerfrequencybound))))
+                upperindex[ii] = min(np.argmin(np.abs(np.subtract(freqs, upperfrequnecybound))),len(freqs))
+                 
         #grab ancient GL rows
         ancientGLrows = ancientGLs[ancientGLs[:,0] > cumGens]
         ancientGLrows = ancientGLrows[ancientGLrows[:,0] <= cumGens + 1.0]
@@ -278,12 +302,16 @@ def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientG
                     coalEmissions[j] += _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,anc=1)
             nDerRemaining -= len(derCoals)
             nAncRemaining -= len(ancCoals)
+        
 
-        for i in range(lf):
-            alpha[i] = _logsumexp(prevAlpha + currTrans[:,i] ) + glEmissions[i] + coalEmissions[i]
+
+
+
+
+        for i in range(len(freqs)):
+            alpha[i] = _logsumexp(prevAlpha[lowerindex[i]:upperindex[i]] + currTrans[lowerindex[i]:upperindex[i],i]) + glEmissions[i] + coalEmissions[i]
             if np.isnan(alpha[i]):
                 alpha[i] = -np.inf
-        
         prevNt = Nt
         prevst = st
         

@@ -239,6 +239,7 @@ if __name__ == "__main__":
 	if times.shape[2] > 1:
 		print('\t(Importance sampling with M = %d Relate samples)'%(times.shape[2]))
 		print()
+	print("done")
 	minargs = (timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
 	res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
 
