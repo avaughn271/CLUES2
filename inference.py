@@ -22,7 +22,7 @@ def parse_args():
 	parser.add_argument('--tCutoff',type=float,default=1000)
 	parser.add_argument('--timeBins',type=str,default=None)
 	parser.add_argument('--sMax',type=float,default=0.1)
-	parser.add_argument('--df',type=int,default=400)
+	parser.add_argument('--df',type=int,default=450)
 	return parser.parse_args()
 
 def load_times(readtimes):
@@ -159,7 +159,8 @@ def likelihood_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,anc
 	return logl
 
 def likelihood_wrapper_scalar(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
-	return(likelihood_wrapper([theta],timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax))
+	return(likelihood_wrapper([theta - 1.0],timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax))
+#added +1 and -1 in order to get better convergence properties.
 
 def traj_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
 	S = theta
@@ -247,8 +248,8 @@ if __name__ == "__main__":
 	minargs = (timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
 
 	if len(S0) == 1:
-		res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [-0.1,0.0,0.1],args=minargs, method = "Brent", tol = 1e-4))
-		S = [res.x] ###look into what the tolerance means for the convergence algorithm.
+		res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.9,1.0,1.1],args=minargs, method = "Brent", tol = 1e-4))
+		S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
 		L = res.fun
 	else:
 		res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
