@@ -93,12 +93,10 @@ def _hap_genotype_likelihood_emission(ancGLs,p):
         emission = -np.inf
     return emission
 
-@njit('float64(float64[:],float64)')
-def _genotype_likelihood_emission(ancGLs,p):
+@njit('float64(float64[:],float64,float64)')
+def _genotype_likelihood_emission(ancGLs,logp, log1p):
 	"""ancGLs is a list of size 3. p is the derived allele frequency.
 	Returns the probability of the given emission"""
-	logp = np.log(p)
-	log1p = np.log(1-p)
 
 	logGenoFreqs = np.array([log1p + log1p, 0.693147180559945309 + logp + log1p,logp + logp])
 	emission = _logsumexp(logGenoFreqs + ancGLs)
@@ -132,8 +130,8 @@ def _log_coal_density(times,n,epoch,xi,Ni,anc=0):
     logp += logPk
     return logp
 
-@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64)',cache=True)
-def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1):
+@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64)',cache=True)
+def forward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1):
 
     '''
     Moves forward in time from past to present
@@ -187,7 +185,7 @@ def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGL
         
         for j in range(lf):
             for iac in range(ancientGLrows.shape[0]):
-                glEmissions[j] += _genotype_likelihood_emission(ancientGLrows[iac,1:],freqs[j])
+                glEmissions[j] += _genotype_likelihood_emission(ancientGLrows[iac,1:],logfreqs[j],log1minusfreqs[j])
             for iac in range(ancientHapGLrows.shape[0]):
                 glEmissions[j] += _hap_genotype_likelihood_emission(ancientHapGLrows[iac,1:],freqs[j])
                 
@@ -219,13 +217,13 @@ def forward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGL
         alphaMat[tb,:] = alpha
     return alphaMat
     
-@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64,float64)',cache=True)
-def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1,currFreq=-1):
+@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64,float64)',cache=True)
+def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1,currFreq=-1):
 
     '''
     Moves backward in time from present to past
     '''
-    
+        
     lf = len(freqs)
     alpha = np.zeros(lf)
     indexofcurrent = -1
@@ -280,7 +278,7 @@ def backward_algorithm(sel,times,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancientG
         glEmissions = np.zeros(lf)
         for j in range(lf):
             for iac in range(ancientGLrows.shape[0]):
-                glEmissions[j] += _genotype_likelihood_emission(ancientGLrows[iac,1:],freqs[j])
+                glEmissions[j] += _genotype_likelihood_emission(ancientGLrows[iac,1:],logfreqs[j],log1minusfreqs[j])
             for iac in range(ancientHapGLrows.shape[0]):
                 glEmissions[j] += _hap_genotype_likelihood_emission(ancientHapGLrows[iac,1:],freqs[j])
         

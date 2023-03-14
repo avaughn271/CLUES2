@@ -122,14 +122,17 @@ def load_data(args):
 	# set up freq bins
 	beta05quantiles = np.genfromtxt(os.path.dirname(__file__) + '/utils/Beta05Quantiles.txt')
 	freqs = np.quantile(beta05quantiles, np.linspace(0.0, 1.0, args.df))
+	logfreqs = np.log(freqs)
+	log1minusfreqs = np.log(np.subtract(1,freqs))
+
 	# load time bins (for defining selection epochs)
 	if args.timeBins != None:
 		timeBins = np.genfromtxt(args.timeBins)
 	else:
 		timeBins = np.array([0.0,tCutoff])
-	return timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq
+	return timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq,logfreqs,log1minusfreqs
 
-def likelihood_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
+def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
 	S = theta
 	Sprime = np.concatenate((S,[0.0]))
 	if np.any(np.abs(Sprime) > sMax):
@@ -148,21 +151,21 @@ def likelihood_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,anc
 		M = tShape[2]
 		loglrs = np.zeros(M)
 		for i in range(M):
-			betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
+			betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
 			logl = logsumexp(betaMat[-2,:])
 			logl0 = proposal_density(times[:,:,i],epochs,N)
 			loglrs[i] = logl-logl0
 		logl = -1 * (-np.log(M) + logsumexp(loglrs))
 	else:
-		betaMat = backward_algorithm(sel,t,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
+		betaMat = backward_algorithm(sel,t,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
 		logl = -logsumexp(betaMat[-2,:])
 	return logl
 
-def likelihood_wrapper_scalar(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
-	return(likelihood_wrapper([theta - 1.0],timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax))
+def likelihood_wrapper_scalar(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
+	return(likelihood_wrapper([theta - 1.0],timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax))
 #added +1 and -1 in order to get better convergence properties.
 
-def traj_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
+def traj_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
 	S = theta
 	Sprime = np.concatenate((S,[0.0]))
 	if np.any(np.abs(Sprime) > sMax):
@@ -187,8 +190,8 @@ def traj_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs
 		loglrs = np.zeros(M)
 		postBySamples = np.zeros((F,T-1,M))
 		for i in range(M):
-			betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
-			alphaMat = forward_algorithm(sel,times[:,:,i],epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals)
+			betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
+			alphaMat = forward_algorithm(sel,times[:,:,i],epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals)
 			logl = logsumexp(betaMat[-2,:])
 			logl0 = proposal_density(times[:,:,i],epochs,N)
 			loglrs[i] = logl-logl0
@@ -198,8 +201,8 @@ def traj_wrapper(theta,timeBins,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs
 
 	else:
 		post = np.zeros((F,T))
-		betaMat = backward_algorithm(sel,t,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
-		alphaMat = forward_algorithm(sel,t,epochs,N,freqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals)
+		betaMat = backward_algorithm(sel,t,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
+		alphaMat = forward_algorithm(sel,t,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals)
 		post = (alphaMat[1:,:] + betaMat[:-1,:]).transpose()
 		post -= logsumexp(post,axis=0)
 	return post
@@ -211,7 +214,7 @@ if __name__ == "__main__":
 	
 	# load data and set up model
 	sMax = args.sMax	
-	timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq = load_data(args)
+	timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq,logfreqs,log1minusfreqs = load_data(args)
 	# read in global Phi(z) lookups
 	z_bins = np.genfromtxt(os.path.dirname(__file__) + '/utils/z_bins.txt')
 	z_logcdf = np.genfromtxt(os.path.dirname(__file__) + '/utils/z_logcdf.txt')
@@ -238,19 +241,20 @@ if __name__ == "__main__":
 
 	opts['initial_simplex']=Simplex
 	    
-	logL0 = likelihood_wrapper(S0,timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
+	logL0 = likelihood_wrapper(S0,timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
 
 	if times.shape[2] > 1:
 		print('\t(Importance sampling with M = %d Relate samples)'%(times.shape[2]))
 		print()
 
 
-	minargs = (timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
+	minargs = (timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
 
 	if len(S0) == 1:
 		res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.9,1.0,1.1],args=minargs, method = "Brent", tol = 1e-4))
 		S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
 		L = res.fun
+		print(S,L)
 	else:
 		res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
 		S = res.x
@@ -264,7 +268,7 @@ if __name__ == "__main__":
 		toprint.append('%d-%d\t%.5f'%(t,u,s)+ "\n")
 
 	# infer trajectory @ MLE of selection parameter
-	post = traj_wrapper(S,timeBins,Ne,freqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
+	post = traj_wrapper(S,timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
 	
 	f = open(args.out+"_inference.txt", "w+")
 	f.writelines(toprint)
