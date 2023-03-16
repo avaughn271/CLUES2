@@ -13,6 +13,8 @@ The basic forward backward algorith has been verified. Works well for frequencie
 
 In terms of improving speed, precompute a lot of the logs and exps. do a better transition probability calculation, as this is actually rather slow. Do Jeff Spence idea 1) bucket means for computing and just shift by mean (or don't shift at all). 2) only compute transition proabilities for square root n number of states, set all else to be 0. Check relative accuracy of this. including for strong selection. Do a better thing for the actual interpolation step. Maybe do a hard index call instead of interpolation. Could even increase number of interpolated points?? Also check what other, slower points of the algorithm are. Also do brent or golden section for search. Check answer is still similar, remember that final function value must also be computed.
 
+Check for a more accurate way of allele transitions, better than diffusion at the boundaries. Maybe diffusion in the middle and something else at the boundaries???
+
 -check coverage probability of the trajectories. Do many independent replicates and pick random point in time. Coverage of all the pooled samples should match up.
 
 
