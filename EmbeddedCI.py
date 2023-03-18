@@ -28,6 +28,15 @@ EXPPOST = np.exp(logpost) # rows are frequency, columns are time interbals
 
 MATRIXTOPLOT = np.zeros((EXPPOST.shape[0],EXPPOST.shape[1]))
 
+#we here find a reasonable place to start.
+StartIndices = [0] * len(epochs)
+for timeinterval in epochs[0:len(epochs) - 1]:
+    summsofar = 0
+    for lowerfrequencyindex in range(len(freqs)):
+        if EXPPOST[lowerfrequencyindex,int(timeinterval)] > 0.000001 / len(freqs):
+            StartIndices[int(timeinterval)] = max(0,lowerfrequencyindex)
+            break
+
 for indexx in range(len(ConfidenceIntervals)):
     for timeinterval in epochs:
         if timeinterval == epochs[len(epochs)-1]: break
@@ -35,9 +44,10 @@ for indexx in range(len(ConfidenceIntervals)):
         currentlow = -1
         currenthigh = -1
         TimeSLICE = EXPPOST[:,int(timeinterval)]
-        for lowerfrequencyindex in range(len(freqs)):
+        for lowerfrequencyindex in range(StartIndices[int(timeinterval)], len(freqs)):
+            possiblesum = TimeSLICE[lowerfrequencyindex]
             for higherfrequencyindex in range(lowerfrequencyindex + 1, len(freqs)):
-                possiblesum = np.sum(TimeSLICE[lowerfrequencyindex:higherfrequencyindex])
+                possiblesum += TimeSLICE[higherfrequencyindex] #np.sum(TimeSLICE[lowerfrequencyindex:higherfrequencyindex])
                 rangeofsum = freqs[higherfrequencyindex] - freqs[lowerfrequencyindex]
                 if possiblesum >= ConfidenceIntervals[indexx] and rangeofsum < tentativespan:
                     tentativespan = rangeofsum
