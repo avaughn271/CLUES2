@@ -6,10 +6,14 @@ CLUES2 is a program to infer selection coefficients, evaluate the statistical ev
 WORK TO DO:
 The basic forward backward algorith has been verified. Works well for frequencies, but we now changed the start and end state transitions.
 
-1) Check how it works for true phylogenies with no importance sampling
-    -check handling of coalescences, including of the mixed processes. In theory the mixed coalescence should be the last coalescence we need to consider. All other should be ancestral. derived allele freq must be in lowest class for this coalescence to happen.
-2) then check how it works for importance sampling, including checking the proposal density function (why not just comopute same likelihood with s=0. hmmmm.)
-3) then, add the emissions of the args on ancient data, only part that needs to change are the emissions.
+1) Think about allele frequency trajectory, especially considering the boundaries/loss of the mutation
+2) Handle the mixed lineage properly
+3) Talk about new plotting
+4) Evaluate conditional independence of the rest of the arg
+5) evaluate importance sampling framework, for example by having relate/argweaver with no recoms and high mutation rate, including checking the proposal density function (why not just comopute same likelihood with s=0. hmmmm.)
+6) check how well other arguments work, like the coal file.
+7) Then, add the emissions of the args on ancient data, only part that needs to change are the emissions.
+8) check coverage probability of posterior intervals.
 
 In terms of improving speed, precompute a lot of the logs and exps. do a better transition probability calculation, as this is actually rather slow. Do Jeff Spence idea 1) bucket means for computing and just shift by mean (or don't shift at all). 2) only compute transition proabilities for square root n number of states, set all else to be 0. Check relative accuracy of this. including for strong selection. Do a better thing for the actual interpolation step. Maybe do a hard index call instead of interpolation. Could even increase number of interpolated points?? Also check what other, slower points of the algorithm are. Also do brent or golden section for search. Check answer is still similar, remember that final function value must also be computed.
 
