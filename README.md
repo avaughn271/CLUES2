@@ -46,7 +46,7 @@ CLUES has been tested on two different input files: posterior samples of ARGs (a
 
 Times: These are the posterior samples of ARGs, more specifically the posterior samples of pairwise coalescence times at the specified SNP. We do not explicitly need the tree topology due to the exchangeability of lineages within the derived and ancestral classes. If you have $M$ samples from the posterior, this file will have 2M lines. If we number the samples 0 to $M-1$, the (n+1)th line will be the coalescence times of derived lineages of the nth sample. The (n+2)th line will be the coalescence times of ancestral lineages of the nth sample. For example, if we sample the following M=3 trees from the posterior:
 
-<img src="https://github.com/avaughn271/CLUES2/blob/main/example/clues1.png" width=90% height=90%>
+<img src="https://github.com/avaughn271/CLUES2/blob/main/example/clues1.png">
 
 The file Times would look like:
 
