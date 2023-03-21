@@ -29,35 +29,36 @@ def load_times(readtimes):
 	"""Load in the coalescent times
     INPUT: readtimes - this is the file name of coalescence times
            times are given on an absolute scale.
-	   Line 1 is coalescence times of derived lineages
+	   Line 1 is coalescence times of derived lineages including the mixed lineage!!!!
 	   Line 2 is coalescence times of ancestral lineages
 	   This is repeated for each important sample
-	   If there are A derived coalescences, there are A + 1 derived samples
-	   If there are B ancestral coalescences, there are B ancestral samples
+	   If there are A derived coalescences, there are A derived samples
+	   If there are B ancestral coalescences, there are B + 1 ancestral samples
 
     OUTPUT: A numpy array of dimension (2,A+B, numberimportancesamples)
     #NEED TO DOUBLE CHECK WITH PAPER FOR HOW MIXED ANCESTRAL IS TAKEN INTO ACCOUNT AND HOW
     YOU FILTER TIMES.
-    For the first dimension of the output, you populate it with the first B-1 of the B coalescences
+    For the first dimension of the output, you populate it with the first B of the B coalescences
     For the second dimension of the output, you populate it with the first A-1 of the A coalescences
     All of the other entries are -1.
     """
 	file1 = open(readtimes, 'r')
 	Lines = file1.readlines()
 	M = int(len(Lines) / 2)
+	#print(Lines)
 	for m in range(M):
 		der = Lines[2 * m].split(",")
 		anc = Lines[2 * m + 1].split(",")
-		ancnum = [-1] * (len(anc) - 1)
-		dernum = [-1] * (len(der) - 1)
-		for i in range(len(der) - 1):
+		ancnum = [-1] * len(anc)
+		dernum = [-1] * len(der)
+		for i in range(len(der)):
 			dernum[i] = float(der[i])
-		for i in range(len(anc) - 1):
+		for i in range(len(anc)):
 			ancnum[i] = float(anc[i])
 		
 		locusDerTimes = np.empty((len(dernum), 1)) # no thinning or burn-in
 		locusAncTimes =  np.empty((len(ancnum), 1))
-		ntot = locusDerTimes.shape[0] + locusAncTimes.shape[0] + 2 # why not just completely fill it out???
+		ntot = locusDerTimes.shape[0] + locusAncTimes.shape[0] + 1 # why not just completely fill it out???
 		locusDerTimes[:,0] = dernum
 		locusAncTimes[:,0] = ancnum
 
@@ -68,6 +69,7 @@ def load_times(readtimes):
 	anctimes = -1.0 * np.ones((ntot,M))
 
 	anctimes[:locusAncTimes.shape[0],:] = locusAncTimes
+	#print(np.array([dertimes,anctimes]))
 	return(np.array([dertimes,anctimes]))
 	#locus time is an array that has dimensions 2 by (total number of leaves) by (number of importance samples)
 	#The first row corresponds to the derived alleles. The columns are populated by daf-1 and n-daf-1 entries each, and are then -1 below this value.

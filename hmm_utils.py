@@ -109,7 +109,8 @@ def _log_coal_density(times,n,epoch,xi,Ni,anc=0):
     if n == 1:
         # this flag indicates to ignore coalescence
         return 0.0
-    
+    #print(times, n, epoch, xi,Ni, anc )  #set of times, n is number of lineages left of that lineage. epoch is [tb,tb+1]
+    #xi is current frequency, #Ni is DIPLOID pop size (1/2 of the previous one.)
     logp = 0
     prevt = epoch[0]
     if anc == 1:
@@ -125,7 +126,7 @@ def _log_coal_density(times,n,epoch,xi,Ni,anc=0):
         prevt = t
         k -= 1
     kchoose2 = k*(k-1)/4
-    logPk = - kchoose2 * 1/(xi*Ni)*(epoch[1]-prevt)
+    logPk = - kchoose2 * 1/(xi*Ni)*(epoch[1]-prevt) # this is the survival function of the exponential. survival is exp(-log*x). chance of no further coalescences.
 
     logp += logPk
     return logp
@@ -135,9 +136,9 @@ def forward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_
 
     '''
     Moves forward in time from past to present
-    '''
+    ''' 
     
-    lf = len(freqs)    
+    lf = len(freqs)
     alpha = np.ones(len(freqs)) # uniform probability of exiting at furthest time point.
     alpha -= _logsumexp(alpha)
     
@@ -150,8 +151,8 @@ def forward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_
     
     cumGens = epochs[-1]
     
-    nDer = np.sum(times[0,:]>=0)+1
-    nDerRemaining = nDer - np.sum(np.logical_and(times[0,:]>=0, times[0,:]<=epochs[-1]))
+    nDer = np.sum(times[0,:]>=0)
+    nDerRemaining = nDer - np.sum(np.logical_and(times[0,:]>=0, times[0,:]<=epochs[-1])) ###??????????????
     nAnc = np.sum(times[1,:]>=0)+1
     nAncRemaining = nAnc - np.sum(np.logical_and(times[1,:]>=0, times[1,:]<=epochs[-1]))
     coalEmissions = np.zeros(lf)
@@ -200,11 +201,32 @@ def forward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_
             ancCoals = np.copy(times[1,:])
             ancCoals = ancCoals[ancCoals <= cumGens]
             ancCoals = ancCoals[ancCoals > cumGens-1.0]
-            nDerRemaining += len(derCoals)
+            nDerRemaining += len(derCoals) ###??????????????????????????????????????
             nAncRemaining += len(ancCoals)
             for j in range(lf):
-                    coalEmissions[j] = _log_coal_density(derCoals,nDerRemaining,epoch,freqs[j],Nt,anc=0)
-                    coalEmissions[j] += _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,anc=1)
+                    if nDerRemaining > 1: # if multiple derived lineages, all is good
+                        coalEmissions[j] = _log_coal_density(derCoals,nDerRemaining,epoch,freqs[j],Nt,anc=0)
+                        coalEmissions[j] += _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,anc=1)
+                    elif nDerRemaining == 0 and nAncRemaining == 1:
+                        if j != 0:
+                            coalEmissions[j] = -1e20 # derived allele freq must be 0.
+                    elif nDerRemaining == 0 and nAncRemaining > 1:
+                        if j != 0:
+                            coalEmissions[j] = -1e20 # derived allele freq must be 0.
+                        else:
+                            coalEmissions[j] = _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,anc=1) # run only ancestral
+                    elif nDerRemaining == 1 and nAncRemaining == 1:
+                        if j != 0:
+                            coalEmissions[j] = 0.0
+                        else:
+                            coalEmissions[j] = _log_coal_density(ancCoals,2,epoch,freqs[j],Nt,anc=1) # run with 2 ancestral lineages
+                    elif nDerRemaining == 1 and nAncRemaining > 1:
+                        if j != 0:
+                            coalEmissions[j] = _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,anc=1)
+                        else:
+                            coalEmissions[j] = _log_coal_density(ancCoals,nAncRemaining+1,epoch,freqs[j],Nt,anc=1) # run with 2 ancestral lineages
+                    else:
+                        print("Incorrect Polarization of Alleles!")
 
         for i in range(lf):
             alpha[i] = _logsumexp(prevAlpha[lowerindex[i]:upperindex[i]] + currTrans[i,lowerindex[i]:upperindex[i]] + glEmissions[lowerindex[i]:upperindex[i]] + coalEmissions[lowerindex[i]:upperindex[i]])
@@ -245,7 +267,7 @@ def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z
     
     cumGens = 0
     
-    nDer = np.sum(times[0,:]>=0)+1
+    nDer = np.sum(times[0,:]>=0)
     nDerRemaining = nDer
     nAnc = np.sum(times[1,:]>=0)+1
     nAncRemaining = nAnc
@@ -294,8 +316,30 @@ def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z
             ancCoals = ancCoals[ancCoals > cumGens]
             ancCoals = ancCoals[ancCoals <= cumGens+1.0]
             for j in range(lf):
-                    coalEmissions[j] = _log_coal_density(derCoals,nDerRemaining,epoch,freqs[j],Nt,anc=0)
-                    coalEmissions[j] += _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,anc=1)
+                    if nDerRemaining > 1: # if multiple derived lineages, all is good
+                        coalEmissions[j] = _log_coal_density(derCoals,nDerRemaining,epoch,freqs[j],Nt,anc=0)
+                        coalEmissions[j] += _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,anc=1)
+                    elif nDerRemaining == 0 and nAncRemaining == 1:
+                        if j != 0:
+                            coalEmissions[j] = -1e20 # derived allele freq must be 0.
+                    elif nDerRemaining == 0 and nAncRemaining > 1:
+                        if j != 0:
+                            coalEmissions[j] = -1e20 # derived allele freq must be 0.
+                        else:
+                            coalEmissions[j] = _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,anc=1) # run only ancestral
+                    elif nDerRemaining == 1 and nAncRemaining == 1:
+                        if j != 0:
+                            coalEmissions[j] = 0.0
+                        else:
+                            coalEmissions[j] = _log_coal_density(ancCoals,2,epoch,freqs[j],Nt,anc=1) # run with 2 ancestral lineages
+                    elif nDerRemaining == 1 and nAncRemaining > 1:
+                        if j != 0:
+                            coalEmissions[j] = _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,anc=1)
+                        else:
+                            coalEmissions[j] = _log_coal_density(ancCoals,nAncRemaining+1,epoch,freqs[j],Nt,anc=1) # run with 2 ancestral lineages
+                    else:
+                        print("Incorrect Polarization of Alleles!")
+                    
             nDerRemaining -= len(derCoals)
             nAncRemaining -= len(ancCoals)
 
@@ -318,7 +362,7 @@ def proposal_density(times,epochs,N):
     logl = 0.
     cumGens = 0
     combinedTimes = np.sort(np.concatenate((times[0,:],times[1,:])))
-    nRemaining = np.sum(combinedTimes>=0) + 2
+    nRemaining = np.sum(combinedTimes>=0) + 1
     for tb in range(0,len(epochs)-1):
         Nt = N[tb]
         epoch = np.array([cumGens,cumGens+1.0])
