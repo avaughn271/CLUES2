@@ -4,7 +4,7 @@
 CLUES2 is a program to infer selection coefficients, evaluate the statistical evidence for selection, and reconstruct historic allele frequencies. The original CLUES was originally developed by Aaron Stern (see the original paper [here](https://doi.org/10.1371/journal.pgen.1008384)) and is currently maintained by [Andrew Vaughn](https://nielsen-lab.github.io/team/andrew-vaughn) as CLUES2. Please report any strange results, errors, or code suggestions to him at [ahv36@berkeley.edu](mailto:ahv36@berkeley.edu). If you use this program, please cite: [Stern, *et al.* Plos Gen. (2019)](https://doi.org/10.1371/journal.pgen.1008384).
 
 WORK TO DO:
-The basic forward backward algorith has been verified. Works well for frequencies, but we now changed the start and end state transitions.
+The basic forward backward algorithm has been verified. Works well for frequencies, but we now changed the start and end state transitions.
 
 1) Think about allele frequency trajectory, especially considering the boundaries/loss of the mutation
 2) Handle the mixed lineage properly
@@ -46,9 +46,9 @@ CLUES has been tested on two different input files: posterior samples of ARGs (a
 
 Times: These are the posterior samples of ARGs, more specifically the posterior samples of pairwise coalescence times at the specified SNP. We do not explicitly need the tree topology due to the exchangeability of lineages within the derived and ancestral classes. If you have $M$ samples from the posterior, this file will have 2M lines. If we number the samples 0 to $M-1$, the (n+1)th line will be the coalescence times of derived lineages of the nth sample. The (n+2)th line will be the coalescence times of ancestral lineages of the nth sample. For example, if we sample the following M=3 trees from the posterior:
 
-<img src="https://github.com/avaughn271/CLUES2/blob/main/example/clues1.png" width=50% height=50%>
-![Test Image 2](example/clues2.png  =250x250)
-![Test Image 3](example/clues3.png  =250x250)
+<img src="https://github.com/avaughn271/CLUES2/blob/main/example/clues1.png" width=20% height=20%>
+<img src="https://github.com/avaughn271/CLUES2/blob/main/example/clues2.png" width=20% height=20%>
+<img src="https://github.com/avaughn271/CLUES2/blob/main/example/clues3.png" width=20% height=20%>
 The file Times would look like:
 
 ```bash
