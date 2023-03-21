@@ -26,7 +26,7 @@ Check for a more accurate way of allele transitions, better than diffusion at th
 
 CLUES can be downloaded from this GitHub repo by running the following command:
 ```bash
-$ git clone https://github.com/avaughn271/CLUES2.0
+$ git clone https://github.com/avaughn271/CLUES2
 ```
 CLUES is written in Python and requires the following Python packages:
 
@@ -44,7 +44,23 @@ TODO
 
 CLUES has been tested on two different input files: posterior samples of ARGs (as described in the original CLUES paper) and historic allele samples (as described in TODO). We describe the input files here:
 
-times (TODO)
+Times: These are the posterior samples of ARGs, more specifically the posterior samples of pairwise coalescence times at the specified SNP. We do not explicitly need the tree topology due to the exchangeability of lineages within the derived and ancestral classes. If you have $M$ samples from the posterior, this file will have 2M lines. If we number the samples 0 to $M-1$, the (n+1)th line will be the coalescence times of derived lineages of the nth sample. The (n+2)th line will be the coalescence times of ancestral lineages of the nth sample. For example, if we sample the following M=3 trees from the posterior:
+
+![Test Image 1](https://github.com/avh36/CLUES2/example/clues1.pdf)
+![Test Image 2](https://github.com/avh36/CLUES2/example/clues2.pdf)
+![Test Image 3](https://github.com/avh36/CLUES2/example/clues3.pdf)
+The file Times would look like:
+
+```bash
+200,700,850
+1000,1250
+170,900,1200
+50,1300
+125,900,2105
+83.6,1700
+```
+We see that there is one entry for each coalescence event in the tree. A coalescence node is a derived node if all of its children have the derived allele **or** one of the immediate child branches of that node is the branch on which the mutation must have arose (marked by a dashed line in the images above). A coalescence event is an ancestral node otherwise. In practice, the algorithm looks at the oldest derived coalescence node and properly treats it as a mixed lineage coalescence event as described in the manuscript, but we label it as a derived node here for simplicity. Note also that the coalescence times in each line must be sorted. You may choose to use only M=1 sample and give CLUES2 a times file with only 2 lines, but you should note that the importance sampling framework will not be used but the given tree will simply be treated as the observed true coalescence tree.
+
 
 Samples: These input files look like the following file. The first column is the sampling times of the ancient samples (given in generations). The second column is the log genotypes probability of 0/0. The third column is the log genotype probability of 0/1 (which is to say 1|0 or 0|1). The fourth column is the log genotype probability of (1/1). For example, the first row of the following file means that an individual was sampled 16.48 generations ago and we are 100% certain has a 0/0 genotype. The second row of the following file means that an individual was sampled 170.68 generations ago to which we assign a probability of 0.105 of being 0/0, a probability 0.878 of being 0/1, and a probability of 0.017 of being 1/1. Uncertainty in genotype calls of ancient data can be caused by imputation. The data should be sorted in increasing order by sampling time.
 
