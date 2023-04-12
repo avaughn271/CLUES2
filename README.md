@@ -6,7 +6,7 @@ CLUES2 is a program to infer selection coefficients, evaluate the statistical ev
 WORK TO DO:
 The basic forward backward algorithm has been verified. Works well for frequencies, but we now changed the start and end state transitions.
 
-1) Think about allele frequency trajectory, especially considering the boundaries/loss of the mutation
+1) Think about allele frequency trajectory, instead of going from 0.05 below and 0.05 above, compute only in the bands that result in 99% or maybe 99.9% of density. Should be much faster, especiialy with large pop sizes.!!!!!!!
 2) Handle the mixed lineage properly
 3) Talk about new plotting
 4) Evaluate conditional independence of the rest of the arg
