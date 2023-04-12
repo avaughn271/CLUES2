@@ -155,7 +155,7 @@ def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_l
 		for i in range(M):
 			betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
 			logl = logsumexp(betaMat[-2,:])
-			logl0 = proposal_density(times[:,:,i],epochs,N)
+			logl0 = proposal_density(times[:,:,i],epochs,N) # check by replacing this with the null sel=0.0 function...
 			loglrs[i] = logl-logl0
 		logl = -1 * (-np.log(M) + logsumexp(loglrs))
 	else:

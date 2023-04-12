@@ -81,8 +81,9 @@ def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf):
 	p1 = np.zeros((lf,lf))
 
 	# load rows into p1
-	for i in range(lf):
+	for i in range(lf):  ###can still significantly speed this up by maybe using a better truncator than 0.05 in either direction
 		p1[i,:] = _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf)
+
 	return(p1)
 
 @njit('float64(float64[:],float64)')
@@ -169,13 +170,28 @@ def forward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_
             currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)
             upperindex = np.zeros(lf)
             lowerindex = np.zeros(lf)
+            maximumabsoluteprobabilityconcentration =  0.999
             for ii in range(lf):
-                p = freqs[ii]
-                maximumabsolutefrequencychangepergeneration = 0.05
-                lowerfrequencybound = p - maximumabsolutefrequencychangepergeneration
-                upperfrequnecybound = p + maximumabsolutefrequencychangepergeneration
-                lowerindex[ii] = max(0,np.argmin(np.abs(np.subtract(freqs, lowerfrequencybound))))
-                upperindex[ii] = min(np.argmin(np.abs(np.subtract(freqs, upperfrequnecybound))),len(freqs))
+                exprow = np.exp(currTrans[ii,:])  # note that the indexing here is reversed as opposed to the backward, because the usage of currtrans is transposed!!!
+                exprowsum = np.sum(exprow) * maximumabsoluteprobabilityconcentration
+                lowerbound = np.argmax(exprow)
+                upperbound = lowerbound + 1
+                totalsumm = exprow[lowerbound]
+                while (totalsumm < exprowsum):
+                    if lowerbound == 0:
+                        totalsumm = totalsumm + exprow[upperbound]
+                        upperbound = upperbound + 1
+                    elif upperbound == lf:
+                        lowerbound = lowerbound - 1
+                        totalsumm = totalsumm + exprow[lowerbound]
+                    elif exprow[lowerbound - 1] >= exprow[upperbound]:
+                        lowerbound = lowerbound - 1
+                        totalsumm = totalsumm + exprow[lowerbound]
+                    else:
+                        totalsumm = totalsumm + exprow[upperbound]
+                        upperbound = upperbound + 1
+                upperindex[ii] = upperbound
+                lowerindex[ii] = lowerbound
         
         #grab ancient GL rows
         ancientGLrows = ancientGLs[np.logical_and(ancientGLs[:,0] <= cumGens, ancientGLs[:,0] > cumGens - 1.0)]
@@ -227,7 +243,6 @@ def forward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_
                             coalEmissions[j] = _log_coal_density(ancCoals,nAncRemaining+1,epoch,freqs[j],Nt,anc=1) # run with 2 ancestral lineages
                     else:
                         print("Incorrect Polarization of Alleles!")
-
         for i in range(lf):
             alpha[i] = _logsumexp(prevAlpha[lowerindex[i]:upperindex[i]] + currTrans[i,lowerindex[i]:upperindex[i]] + glEmissions[lowerindex[i]:upperindex[i]] + coalEmissions[lowerindex[i]:upperindex[i]])
             if np.isnan(alpha[i]):
@@ -245,7 +260,6 @@ def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z
     '''
     Moves backward in time from present to past
     '''
-        
     lf = len(freqs)
     alpha = np.zeros(lf)
     indexofcurrent = -1
@@ -272,23 +286,40 @@ def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z
     nAnc = np.sum(times[1,:]>=0)+1
     nAncRemaining = nAnc
     coalEmissions = np.zeros(lf)
-
     for tb in range(0,T):
         Nt = N[tb]
         epoch = np.array([cumGens,cumGens+1.0])
         st = sel[tb]
         prevAlpha = np.copy(alpha)
         if prevNt != Nt or prevst != st:
-            currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)
+            currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)   # note that the indexing here is reversed as opposed to the forward, because the usage of currtrans is transposed!!!
             upperindex = np.zeros(lf)
             lowerindex = np.zeros(lf)
+            maximumabsoluteprobabilityconcentration = 0.999
             for ii in range(lf):
-                p = freqs[ii]
-                maximumabsolutefrequencychangepergeneration = 0.05
-                lowerfrequencybound = p - maximumabsolutefrequencychangepergeneration
-                upperfrequnecybound = p + maximumabsolutefrequencychangepergeneration
-                lowerindex[ii] = max(0,np.argmin(np.abs(np.subtract(freqs, lowerfrequencybound))))
-                upperindex[ii] = min(np.argmin(np.abs(np.subtract(freqs, upperfrequnecybound))),len(freqs))
+                exprow = np.exp(currTrans[:,ii]) ###deleted exp
+                exprowsum = np.sum(exprow) * maximumabsoluteprobabilityconcentration
+                lowerbound = np.argmax(exprow)
+                upperbound = lowerbound + 1
+                totalsumm = exprow[lowerbound]
+                while (totalsumm < exprowsum):
+                    if lowerbound == 0:
+                        totalsumm = totalsumm + exprow[upperbound]
+                        upperbound = upperbound + 1
+                    elif upperbound == lf:
+                        lowerbound = lowerbound - 1
+                        totalsumm = totalsumm + exprow[lowerbound]
+                    elif exprow[lowerbound - 1] >= exprow[upperbound]:
+                        lowerbound = lowerbound - 1
+                        totalsumm = totalsumm + exprow[lowerbound]
+                    else:
+                        totalsumm = totalsumm + exprow[upperbound]
+                        upperbound = upperbound + 1
+                upperindex[ii] = upperbound
+                lowerindex[ii] = lowerbound
+            
+            #print(upperindex)
+            #print(lowerindex)
                  
         #grab ancient GL rows
         ancientGLrows = ancientGLs[ancientGLs[:,0] > cumGens]
@@ -347,6 +378,7 @@ def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z
             alpha[i] = _logsumexp(prevAlpha[lowerindex[i]:upperindex[i]] + currTrans[lowerindex[i]:upperindex[i],i]) + glEmissions[i] + coalEmissions[i]
             if np.isnan(alpha[i]):
                 alpha[i] = -np.inf
+
         prevNt = Nt
         prevst = st
         cumGens += 1.0
