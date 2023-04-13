@@ -1,7 +1,6 @@
 import numpy as np
 from hmm_utils import forward_algorithm
 from hmm_utils import backward_algorithm
-from hmm_utils import proposal_density
 from scipy.special import logsumexp
 from scipy.optimize import minimize, minimize_scalar
 import argparse
@@ -45,31 +44,18 @@ def load_times(readtimes):
 	file1 = open(readtimes, 'r')
 	Lines = file1.readlines()
 	M = int(len(Lines) / 2)
-	#print(Lines)
+	ntot = len(Lines[0].split(",")) + len(Lines[1].split(","))
+	dertimes = -1.0 * np.ones((ntot,M))
+	anctimes = -1.0 * np.ones((ntot,M))
+
 	for m in range(M):
 		der = Lines[2 * m].split(",")
 		anc = Lines[2 * m + 1].split(",")
-		ancnum = [-1] * len(anc)
-		dernum = [-1] * len(der)
 		for i in range(len(der)):
-			dernum[i] = float(der[i])
+			dertimes[i,m] = float(der[i])
 		for i in range(len(anc)):
-			ancnum[i] = float(anc[i])
-		
-		locusDerTimes = np.empty((len(dernum), 1)) # no thinning or burn-in
-		locusAncTimes =  np.empty((len(ancnum), 1))
-		ntot = locusDerTimes.shape[0] + locusAncTimes.shape[0] + 1 # why not just completely fill it out???
-		locusDerTimes[:,0] = dernum
-		locusAncTimes[:,0] = ancnum
+			anctimes[i,m] = float(anc[i])
 
-	dertimes = -1.0 * np.ones((ntot,M))
-
-	dertimes[:locusDerTimes.shape[0],:] = locusDerTimes
-
-	anctimes = -1.0 * np.ones((ntot,M))
-
-	anctimes[:locusAncTimes.shape[0],:] = locusAncTimes
-	#print(np.array([dertimes,anctimes]))
 	return(np.array([dertimes,anctimes]))
 	#locus time is an array that has dimensions 2 by (total number of leaves) by (number of importance samples)
 	#The first row corresponds to the derived alleles. The columns are populated by daf-1 and n-daf-1 entries each, and are then -1 below this value.
@@ -134,7 +120,7 @@ def load_data(args):
 		timeBins = np.array([0.0,tCutoff])
 	return timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq,logfreqs,log1minusfreqs
 
-def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
+def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax, Weights = []):
 	S = theta
 	Sprime = np.concatenate((S,[0.0]))
 	if np.any(np.abs(Sprime) > sMax):
@@ -155,19 +141,18 @@ def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_l
 		for i in range(M):
 			betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
 			logl = logsumexp(betaMat[-2,:])
-			logl0 = proposal_density(times[:,:,i],epochs,N) # check by replacing this with the null sel=0.0 function...
-			loglrs[i] = logl-logl0
+			loglrs[i] = logl-Weights[i]
 		logl = -1 * (-np.log(M) + logsumexp(loglrs))
 	else:
 		betaMat = backward_algorithm(sel,t,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
 		logl = -logsumexp(betaMat[-2,:])
 	return logl
 
-def likelihood_wrapper_scalar(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
-	return(likelihood_wrapper([theta - 1.0],timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax))
+def likelihood_wrapper_scalar(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax, Weights = []):
+	return(likelihood_wrapper([theta - 1.0],timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax, Weights))
 #added +1 and -1 in order to get better convergence properties.
 
-def traj_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax):
+def traj_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax, Weights = []):
 	S = theta
 	Sprime = np.concatenate((S,[0.0]))
 	if np.any(np.abs(Sprime) > sMax):
@@ -195,8 +180,7 @@ def traj_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,
 			betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals,currFreq=currFreq)
 			alphaMat = forward_algorithm(sel,times[:,:,i],epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals)
 			logl = logsumexp(betaMat[-2,:])
-			logl0 = proposal_density(times[:,:,i],epochs,N)
-			loglrs[i] = logl-logl0
+			loglrs[i] = logl - Weights[i]
 			postBySamples[:,:,i] = (alphaMat[1:,:] + betaMat[:-1,:]).transpose()
 		post = logsumexp(loglrs + postBySamples,axis=2)
 		post -= logsumexp(post,axis=0)
@@ -242,38 +226,62 @@ if __name__ == "__main__":
 		raise ValueError
 
 	opts['initial_simplex']=Simplex
-	    
-	logL0 = likelihood_wrapper(S0,timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
-
+	ImpSamp = False
 	if times.shape[2] > 1:
-		print('\t(Importance sampling with M = %d Relate samples)'%(times.shape[2]))
+		print('\t(Importance sampling with M = %d samples)'%(times.shape[2]))
 		print()
+		ImpSamp = True
+	if not ImpSamp: # to account for whether we return the likelihood or the log likelihood
 
+		logL0 = likelihood_wrapper(S0,timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
 
-	minargs = (timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
+		minargs = (timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
 
-	if len(S0) == 1:
-		res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.9,1.0,1.1],args=minargs, method = "Brent", tol = 1e-4))
-		S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
-		L = res.fun
-		print(S,L)
+		if len(S0) == 1:
+			res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.9,1.0,1.1],args=minargs, method = "Brent", tol = 1e-4))
+			S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
+			L = res.fun
+			print(S,L)
+		else:
+			res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
+			S = res.x
+			L = res.fun
+
+		toprint = []
+
+		toprint.append('logLR: %.4f'%(-L+logL0) + "\n")
+		Weights = []
 	else:
-		res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
-		S = res.x
-		L = res.fun
+		M = times.shape[2]
+		Weights = np.zeros(M)
+		for i in range(M):
+			betaMatl0 = backward_algorithm(np.zeros(len(Ne)),times[:,:,i],epochs,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=noCoals,currFreq=currFreq)
+			Weights[i] = logsumexp(betaMatl0[-2,:])
 
-	toprint = []
+		minargs = (timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax, Weights)
 
-	toprint.append('logLR: %.4f'%(-L+logL0) + "\n")
+		if len(S0) == 1:
+			res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.9,1.0,1.1],args=minargs, method = "Brent", tol = 1e-4))
+			S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
+			L = res.fun
+			print(S,L)
+		else:
+			res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
+			S = res.x
+			L = res.fun
+
+		toprint = []
+
+		toprint.append('logLR: %.4f'%(-L) + "\n")
 	toprint.append('Epoch\tSelection MLE'+ "\n")
 	for s,t,u in zip(S,timeBins[:-1],timeBins[1:]):
 		toprint.append('%d-%d\t%.5f'%(t,u,s)+ "\n")
 
 	# infer trajectory @ MLE of selection parameter
-	post = traj_wrapper(S,timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
+	post = traj_wrapper(S,timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax, Weights)
 	
 	f = open(args.out+"_inference.txt", "w+")
 	f.writelines(toprint)
 	f.close()
-	np.savetxt(args.out+"_post.txt", post, delimiter=",") #print(i,np.sum(freqs * np.exp(post[:,i])))
-	np.savetxt(args.out+"_freqs.txt", freqs, delimiter=",") #print(i,np.sum(freqs * np.exp(post[:,i])))
+	np.savetxt(args.out+"_post.txt", post, delimiter=",")
+	np.savetxt(args.out+"_freqs.txt", freqs, delimiter=",")

@@ -384,30 +384,3 @@ def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z
         cumGens += 1.0
         alphaMat[tb,:] = alpha
     return alphaMat
-
-@njit('float64(float64[:,:],float64[:],float64[:])',cache=True)
-def proposal_density(times,epochs,N):
-    '''
-    Moves backward in time from present to past
-    '''
-    
-    logl = 0.
-    cumGens = 0
-    combinedTimes = np.sort(np.concatenate((times[0,:],times[1,:])))
-    nRemaining = np.sum(combinedTimes>=0) + 1
-    for tb in range(0,len(epochs)-1):
-        Nt = N[tb]
-        epoch = np.array([cumGens,cumGens+1.0])
-        
-        #grab coal times during epoch
-        # calculate coal emission probs
-
-        Coals = np.copy(combinedTimes)
-        Coals = Coals[Coals > cumGens]
-        Coals = Coals[Coals <= cumGens+1.0]
-      
-        logl += _log_coal_density(Coals,nRemaining,epoch,1.0,Nt,anc=0)
-        nRemaining -= len(Coals)
-        
-        cumGens += 1.0
-    return logl
