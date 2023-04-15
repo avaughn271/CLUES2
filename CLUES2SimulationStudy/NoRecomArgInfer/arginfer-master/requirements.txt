@@ -1,0 +1,11 @@
+numpy==1.19.5
+pandas==1.1.5
+sortedcontainers
+bintrees
+tskit
+msprime==0.7.4
+argparse
+tqdm
+#matplotlib
+#copy
+#unittest
