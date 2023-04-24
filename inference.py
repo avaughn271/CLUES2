@@ -90,13 +90,7 @@ def load_data(args):
 	# load ancient haploid genotype likelihoods
 	ancientHapGLs = np.zeros((0,3))
 
-	if noCoals:
-		try:
-			tCutoff = np.max(ancientGLs[:,0])+1.0
-		except:
-			tCutoff = np.max(ancientHapGLs[:,0])+1.0
-	else:
-		tCutoff = args.tCutoff
+	tCutoff = args.tCutoff
 
 	epochs = np.arange(0.0,tCutoff,int(1))
 	# loading population size trajectory
