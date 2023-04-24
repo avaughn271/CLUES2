@@ -102,7 +102,7 @@ $ python PATH/inference.py
 
 **--coal** The population size file denoting different population sizes through time. Identical to the file format used by (RELATE)[https://myersgroup.github.io/relate/]. The population sizes considered here are the HAPLOID population size, denoting the number of haplotypes in a given population, NOT the number of diploid individuals. 100 diploid humans corresponds to an N value of 200. Either this or a value of N must be supplied, but not both.
 
-**--tCutoff** The maximum time (in generations) to be considered in the analysis. This is only used if arg samples are used. If ancient allele genotypes are used, the cutoff is automatically set to 1 more than the maximum sampling time.
+**--tCutoff** The maximum time (in generations) to be considered in the analysis.
 
 **--df** This is the number of discretization points that is used to bin the allele frequencies. A higher number will result in less error due to rounding of allele frequencies but at increased computational cost. We find that having a finer discretization (higher df) is more important when N is large and/or s is close to 0. This is because these cases result in smaller allele frequency fluctuations from generation to generation and only a fine discretization grid will be able to model them accurately. The most rigorous way to set df is to steadily increase df until the results appear to have converged, but we find the default value of 400 is sufficient for nearly all cases.
 
