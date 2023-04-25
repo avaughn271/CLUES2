@@ -80,7 +80,7 @@ CLUES has 3 steps:
 
 ## (1) Preprocess Data
 
-The user will need to process their input data to generate a genotype sample or a set of samples of coalescence times. If you wish to use Relate to infer ARGs, we provide a script to convert the output of Relate importance sampling for the marginal tree at a given SNP.Please see the documentation of Relate [Relate v1.1](https://myersgroup.github.io/relate/) [[Speidel, *et al.* Nat. Gen. 2019]](https://www.nature.com/articles/s41588-019-0484-x), specifically the "Sample branch lengths" functionality. Use option "--format n". We provide a script "RelateToCLUES.py" to convert the output file of this step to the input for CLUES2. (TODO)
+The user will need to process their input data to generate a genotype sample or a set of samples of coalescence times. If you wish to use Relate to infer ARGs, we provide a script to convert the output of Relate importance sampling for the marginal tree at a given SNP. Please see the documentation of Relate [Relate v1.1](https://myersgroup.github.io/relate/) [[Speidel, *et al.* Nat. Gen. 2019]](https://www.nature.com/articles/s41588-019-0484-x), specifically the "Sample branch lengths" functionality. Use option "--format n" and set "--first_bp" and "--last_bp" to both be equal to the basepair position of your SNP of interest. We provide a script "RelateToCLUES.py" to convert the output file of this step to the input for CLUES2.
 
 
 
