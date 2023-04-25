@@ -80,7 +80,40 @@ CLUES has 3 steps:
 
 ## (1) Preprocess Data
 
-The user will need to process their input data to generate a genotype sample or a set of samples of coalescence times. Please see the documentation of Relate [Relate v1.1](https://myersgroup.github.io/relate/) [[Speidel, *et al.* Nat. Gen. 2019]](https://www.nature.com/articles/s41588-019-0484-x) and processed using the `extract_coals.py` script. (TODO)
+The user will need to process their input data to generate a genotype sample or a set of samples of coalescence times. If you wish to use Relate to infer ARGs, we provide a script to convert the output of Relate importance sampling for the marginal tree at a given SNP.Please see the documentation of Relate [Relate v1.1](https://myersgroup.github.io/relate/) [[Speidel, *et al.* Nat. Gen. 2019]](https://www.nature.com/articles/s41588-019-0484-x), specifically the "Sample branch lengths" functionality. Use option "--format n". We provide a script "RelateToCLUES.py" to convert the output file of this step to the input for CLUES2. (TODO)
+
+
+
+
+
+
+
+```bash
+$ python PATH/RelateToCLUES.py
+```
+
+## This step takes as input:
+
+**--RelateSamples** The output file of the above Relate step.
+
+**--DerivedFile** A file containing one line for each leaf. Considering the lines as 0-indexed, the i'th line is 0 if leaf i has the ancestral allele and is 1 if leaf i has the derived allele. This can often be read off directly from the VCF file line for the snp of interest.
+
+**--out**  The prefix of the output file.
+
+## This step will produce (in the current working directory)
+
+***out.txt*** A file resembling the input file for dervied and ancestral coalescent times described above. You may run this script with *--RelateSamples example/example.newick* and *--DerivedFile example/IsDerived.txt* to see how the script works.
+
+
+
+
+
+
+
+
+
+
+
 
 ## (2) Run Inference
 
