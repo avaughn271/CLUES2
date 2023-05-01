@@ -83,7 +83,6 @@ def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf):
 	# load rows into p1
 	for i in range(lf):  ###can still significantly speed this up by maybe using a better truncator than 0.05 in either direction
 		p1[i,:] = _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf)
-
 	return(p1)
 
 @njit('float64(float64[:],float64)')
@@ -254,8 +253,8 @@ def forward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_
         alphaMat[tb,:] = alpha
     return alphaMat
     
-@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64,float64)',cache=True)
-def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1,currFreq=-1):
+@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],float64[:,:],int64,int64,float64)',cache=True)
+def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,TRANMATRIX, noCoals=1,precomputematrixboolean=0,currFreq=-1):
 
     '''
     Moves backward in time from present to past
@@ -292,7 +291,10 @@ def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z
         st = sel[tb]
         prevAlpha = np.copy(alpha)
         if prevNt != Nt or prevst != st:
-            currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)   # note that the indexing here is reversed as opposed to the forward, because the usage of currtrans is transposed!!!
+            if precomputematrixboolean:
+                currTrans = TRANMATRIX
+            else:
+                currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)   # note that the indexing here is reversed as opposed to the forward, because the usage of currtrans is transposed!!!
             upperindex = np.zeros(lf)
             lowerindex = np.zeros(lf)
             maximumabsoluteprobabilityconcentration = 0.999
@@ -318,8 +320,6 @@ def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z
                 upperindex[ii] = upperbound
                 lowerindex[ii] = lowerbound
             
-            #print(upperindex)
-            #print(lowerindex)
                  
         #grab ancient GL rows
         ancientGLrows = ancientGLs[ancientGLs[:,0] > cumGens]
