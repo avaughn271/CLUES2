@@ -116,17 +116,18 @@ def _log_coal_density(times,n,epoch,xi,Ni,anc=0):
     if anc == 1:
         xi = 1.0-xi
     k=n
+    xiNi = xi*Ni
     for i,t in enumerate(times):
         k = n-i
         kchoose2 = k*(k-1)/4
-        dLambda = 1/(xi*Ni)*(t-prevt)
+        dLambda = 1/xiNi*(t-prevt)
         logpk = - np.log(xi) - kchoose2 * dLambda
         logp += logpk
         
         prevt = t
         k -= 1
     kchoose2 = k*(k-1)/4
-    logPk = - kchoose2 * 1/(xi*Ni)*(epoch[1]-prevt) # this is the survival function of the exponential. survival is exp(-log*x). chance of no further coalescences.
+    logPk = - kchoose2 * 1/xiNi*(epoch[1]-prevt) # this is the survival function of the exponential. survival is exp(-log*x). chance of no further coalescences.
 
     logp += logPk
     return logp
@@ -374,33 +375,50 @@ def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z
             nDerRemaining -= len(derCoals)
             nAncRemaining -= len(ancCoals)
         ###Here, we try to do the same bounds of summation as before.
-        maxbackwardtransition = 0.999
-        lowerbounddd = np.argmax(prevAlpha)
-        upperboundd = lowerbounddd + 1
-        maxelement = prevAlpha[lowerbounddd]
-        exprow = np.exp(prevAlpha - maxelement)
-        exprowsum = np.sum(exprow) * maxbackwardtransition
-        totalsumm = exprow[lowerbounddd]
-        while (totalsumm < exprowsum):
-            if lowerbounddd == 0:
-                totalsumm = totalsumm + exprow[upperboundd]
-                upperboundd = upperboundd + 1
-            elif upperboundd == lf:
-                lowerbounddd = lowerbounddd - 1
-                totalsumm = totalsumm + exprow[lowerbounddd]
-            elif exprow[lowerbounddd - 1] >= exprow[upperboundd]:
-                lowerbounddd = lowerbounddd - 1
-                totalsumm = totalsumm + exprow[lowerbounddd]
-            else:
-                totalsumm = totalsumm + exprow[upperboundd]
-                upperboundd = upperboundd + 1
-        lowerbounddd = max(0, lowerbounddd - 3)
-        upperboundd = min(lf - 1, upperboundd + 3)
+        lower2 = 0
+        upper2 = len(freqs)
+
+        if precomputematrixboolean == 1: # should only do this in importance sampling case.
+            maxbackwardtransition = 0.999
+            lowerbounddd = np.argmax(prevAlpha)
+            upperboundd = lowerbounddd + 1
+            maxelement = prevAlpha[lowerbounddd]
+            exprow = np.exp(prevAlpha - maxelement)
+            exprowsum = np.sum(exprow) * maxbackwardtransition
+            totalsumm = exprow[lowerbounddd]
+            while (totalsumm < exprowsum):
+                if lowerbounddd == 0:
+                    totalsumm = totalsumm + exprow[upperboundd]
+                    upperboundd = upperboundd + 1
+                elif upperboundd == lf:
+                    lowerbounddd = lowerbounddd - 1
+                    totalsumm = totalsumm + exprow[lowerbounddd]
+                elif exprow[lowerbounddd - 1] >= exprow[upperboundd]:
+                    lowerbounddd = lowerbounddd - 1
+                    totalsumm = totalsumm + exprow[lowerbounddd]
+                else:
+                    totalsumm = totalsumm + exprow[upperboundd]
+                    upperboundd = upperboundd + 1
+            lowerbounddd = max(0, lowerbounddd - 3)
+            upperboundd = min(lf - 1, upperboundd + 3)
+            #############################################
+            upper2 = -1
+            for upin in range(lf-1,-1, -1):
+                if lowerindex[upin] < upperboundd:
+                    upper2 = upin
+                    break
+            lower2 = -1
+            for upin in range(lf):
+                if upperindex[upin] > lowerbounddd:
+                    lower2 = upin
+                    break
+            upper2 = min(lf, round(upper2 + lf/20))
+            lower2 = max(0, round(lower2  - lf/20))
+            if nDerRemaining == 1:
+                lower2 = min(lower2, 0)
+
         #########################################
-        truemin = round(max(lowerbounddd - abs(lowerindex[lowerbounddd] - lowerbounddd) - lf/20, 0))
-        truemax = round(min(upperboundd + abs(upperindex[upperboundd] - upperboundd) + lf/20, lf))
-        for i in range(truemin,truemax):
-        #for i in range(len(freqs)): # maybe keep this unless there is an importance sampling boolean.
+        for i in range(lower2,upper2):
             alpha[i] = _logsumexp(prevAlpha[lowerindex[i]:upperindex[i]] + currTrans[lowerindex[i]:upperindex[i],i]) + glEmissions[i] + coalEmissions[i]
             if np.isnan(alpha[i]):
                 alpha[i] = -np.inf
