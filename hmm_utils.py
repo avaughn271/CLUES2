@@ -143,7 +143,7 @@ def forward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_
     alpha -= _logsumexp(alpha)
     
     T = len(epochs)-1
-    alphaMat = np.zeros((T+1,lf))
+    alphaMat = np.full((T+1,lf), -1e20)
     alphaMat[-1,:] = alpha
 
     prevNt = -1
@@ -272,7 +272,7 @@ def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z
     alpha[indexofcurrent] = 0.0 # index of all -Infs except freq bin closest to the true current freq
 
     T = len(epochs)-1
-    alphaMat = np.zeros((T+1,lf))
+    alphaMat = np.full((T+1,lf), -1e20)
     alphaMat[0,:] = alpha
     
     prevNt = -1
@@ -373,8 +373,34 @@ def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z
                     
             nDerRemaining -= len(derCoals)
             nAncRemaining -= len(ancCoals)
-
-        for i in range(len(freqs)):
+        ###Here, we try to do the same bounds of summation as before.
+        maxbackwardtransition = 0.999
+        lowerbounddd = np.argmax(prevAlpha)
+        upperboundd = lowerbounddd + 1
+        maxelement = prevAlpha[lowerbounddd]
+        exprow = np.exp(prevAlpha - maxelement)
+        exprowsum = np.sum(exprow) * maxbackwardtransition
+        totalsumm = exprow[lowerbounddd]
+        while (totalsumm < exprowsum):
+            if lowerbounddd == 0:
+                totalsumm = totalsumm + exprow[upperboundd]
+                upperboundd = upperboundd + 1
+            elif upperboundd == lf:
+                lowerbounddd = lowerbounddd - 1
+                totalsumm = totalsumm + exprow[lowerbounddd]
+            elif exprow[lowerbounddd - 1] >= exprow[upperboundd]:
+                lowerbounddd = lowerbounddd - 1
+                totalsumm = totalsumm + exprow[lowerbounddd]
+            else:
+                totalsumm = totalsumm + exprow[upperboundd]
+                upperboundd = upperboundd + 1
+        lowerbounddd = max(0, lowerbounddd - 3)
+        upperboundd = min(lf - 1, upperboundd + 3)
+        #########################################
+        truemin = round(max(lowerbounddd - abs(lowerindex[lowerbounddd] - lowerbounddd) - lf/20, 0))
+        truemax = round(min(upperboundd + abs(upperindex[upperboundd] - upperboundd) + lf/20, lf))
+        for i in range(truemin,truemax):
+        #for i in range(len(freqs)): # maybe keep this unless there is an importance sampling boolean.
             alpha[i] = _logsumexp(prevAlpha[lowerindex[i]:upperindex[i]] + currTrans[lowerindex[i]:upperindex[i],i]) + glEmissions[i] + coalEmissions[i]
             if np.isnan(alpha[i]):
                 alpha[i] = -np.inf

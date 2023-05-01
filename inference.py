@@ -117,7 +117,6 @@ def load_data(args):
 
 def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax, Weights = []):
 	S = theta
-	print("likelihood")
 	Sprime = np.concatenate((S,[0.0]))
 	if np.any(np.abs(Sprime) > sMax):
 		return np.inf
@@ -140,7 +139,7 @@ def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_l
 			precompute = 1
 		for i in range(M):
 			betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,tranmatrix,noCoals=noCoals,precomputematrixboolean=precompute,currFreq=currFreq)
-			np.savetxt(str(i)+"_beta.txt", betaMat, delimiter=",")
+			#np.savetxt(str(i)+"_beta.txt", betaMat, delimiter=",")
 			logl = logsumexp(betaMat[-2,:])
 			loglrs[i] = logl-Weights[i]
 		logl = -1 * (-np.log(M) + logsumexp(loglrs))
