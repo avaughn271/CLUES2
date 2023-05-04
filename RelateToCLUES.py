@@ -196,6 +196,7 @@ if __name__ == "__main__":
     minflips = min(TotalError)
     if minflips == 0:
         print("Infinite sites assumption satisfied. No allele flips necessary.")
+        NewIsDerived = IsDerived
     else:
         minnn = min(TotalError)
         if minnn == 1:
