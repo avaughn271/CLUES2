@@ -231,10 +231,9 @@ if __name__ == "__main__":
         newicktree = newicktree[len(newicktree)-1]
         TotalStrings.extend(OneTreeToList2((newicktree[:-1]), NewIsDerived))
     
-    tempderived = []
-    for i in NewIsDerived: tempderived.append(str(i) + "\n")
-
     if minflips > 0:
+        tempderived = []
+        for i in NewIsDerived: tempderived.append(str(i) + "\n")
         f = open(args.out + "_derived.txt", "w+")
         f.writelines(tempderived)
         f.close()
