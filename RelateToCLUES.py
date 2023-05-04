@@ -204,33 +204,40 @@ if __name__ == "__main__":
             print("Infinite sites assumption not satisfied. Flipping " + str(int(minnn)) + " leaves out of " + str(len(IsDerived)) + " leaves.")
         FlippingIndex = TotalError.index(minnn)
 
-    NewIsDerived = [0] * len(IsDerived)
-    Descendants = []
+        NewIsDerived = [0] * len(IsDerived)
+        Descendants = []
 
-    def FindDescendants(List, nodee, nodeeindex):
-        if not (nodee in List[1]):
-            Descendants.append(int(List[0][nodeeindex]))
-        else:
-            child1index = (np.where(np.array(List[1]) == nodee))[0][0]
-            child2index = (np.where(np.array(List[1]) == nodee))[0][1]
-            FindDescendants(List, List[0][child1index], child1index)
-            FindDescendants(List, List[0][child2index], child2index)
+        def FindDescendants(List, nodee, nodeeindex):
+            if not (nodee in List[1]):
+                Descendants.append(int(List[0][nodeeindex]))
+            else:
+                child1index = (np.where(np.array(List[1]) == nodee))[0][0]
+                child2index = (np.where(np.array(List[1]) == nodee))[0][1]
+                FindDescendants(List, List[0][child1index], child1index)
+                FindDescendants(List, List[0][child2index], child2index)
 
-    FindDescendants(List,  List[0][FlippingIndex], FlippingIndex)
+        FindDescendants(List,  List[0][FlippingIndex], FlippingIndex)
 
-    for i in Descendants:
-        NewIsDerived[i] = 1
-    for i in range(len(NewIsDerived)):
-        if NewIsDerived[i] > IsDerived[i]:
-            print("Flipped leaf " + str(i) + " from ancestral (0) to derived (1).")
-        if NewIsDerived[i] < IsDerived[i]:
-            print("Flipped leaf " + str(i) + " from derived (1) to ancestral (0).")
+        for i in Descendants:
+            NewIsDerived[i] = 1
+        for i in range(len(NewIsDerived)):
+            if NewIsDerived[i] > IsDerived[i]:
+                print("Flipped leaf " + str(i) + " from ancestral (0) to derived (1).")
+            if NewIsDerived[i] < IsDerived[i]:
+                print("Flipped leaf " + str(i) + " from derived (1) to ancestral (0).")
         
     for i in range(len(Lines)):
         newicktree = (Lines[i].split("\t"))
         newicktree = newicktree[len(newicktree)-1]
         TotalStrings.extend(OneTreeToList2((newicktree[:-1]), NewIsDerived))
+    
+    tempderived = []
+    for i in NewIsDerived: tempderived.append(str(i) + "\n")
 
-    f = open(args.out + ".txt", "w+")
+    if minflips > 0:
+        f = open(args.out + "_derived.txt", "w+")
+        f.writelines(tempderived)
+        f.close()
+    f = open(args.out + "_times.txt", "w+")
     f.writelines(TotalStrings)
     f.close()
