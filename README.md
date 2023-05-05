@@ -4,20 +4,9 @@
 CLUES2 is a program to infer selection coefficients, evaluate the statistical evidence for selection, and reconstruct historic allele frequencies. The original CLUES was originally developed by Aaron Stern (see the original paper [here](https://doi.org/10.1371/journal.pgen.1008384)) and is currently maintained by [Andrew Vaughn](https://nielsen-lab.github.io/team/andrew-vaughn) as CLUES2. Please report any strange results, errors, or code suggestions to him at [ahv36@berkeley.edu](mailto:ahv36@berkeley.edu). If you use this program, please cite: [Stern, *et al.* Plos Gen. (2019)](https://doi.org/10.1371/journal.pgen.1008384).
 
 WORK TO DO:
-The basic forward backward algorithm has been verified. Works well for frequencies, but we now changed the start and end state transitions.
-
-3) Talk about new plotting
-[comment]: <> (Evaluate conditional independence of the rest of the arg)
-5) evaluate importance sampling framework, for example by having relate/argweaver with no recoms and high mutation rate, including checking the proposal density function (why not just comopute same likelihood with s=0. hmmmm.)
-6) check how well other arguments work, like the coal file.
-7) Then, add the emissions of the args on ancient data, only part that needs to change are the emissions.
-8) check coverage probability of posterior intervals.
-
-In terms of improving speed, precompute a lot of the logs and exps. do a better transition probability calculation, as this is actually rather slow. Do Jeff Spence idea 1) bucket means for computing and just shift by mean (or don't shift at all). 2) only compute transition proabilities for square root n number of states, set all else to be 0. Check relative accuracy of this. including for strong selection. Do a better thing for the actual interpolation step. Maybe do a hard index call instead of interpolation. Could even increase number of interpolated points?? Also check what other, slower points of the algorithm are. Also do brent or golden section for search. Check answer is still similar, remember that final function value must also be computed.
-
-Check for a more accurate way of allele transitions, better than diffusion at the boundaries. Maybe diffusion in the middle and something else at the boundaries???
-
--check coverage probability of the trajectories. Do many independent replicates and pick random point in time. Coverage of all the pooled samples should match up.
+1) check how well other arguments work, like the coal file and multiple selection coefficients.
+2) Then, add the emissions of the args on ancient data, only part that needs to change are the emissions.
+3) check coverage probability of posterior intervals, do many independent replicates and pick random point in time. Coverage of all the pooled samples should match up.
 
 
 ## Installation
