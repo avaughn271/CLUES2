@@ -6,10 +6,8 @@ CLUES2 is a program to infer selection coefficients, evaluate the statistical ev
 WORK TO DO:
 The basic forward backward algorithm has been verified. Works well for frequencies, but we now changed the start and end state transitions.
 
-1) Think about allele frequency trajectory, instead of going from 0.05 below and 0.05 above, compute only in the bands that result in 99% or maybe 99.9% of density. Should be much faster, especiialy with large pop sizes.!!!!!!!
-2) Handle the mixed lineage properly
 3) Talk about new plotting
-4) Evaluate conditional independence of the rest of the arg
+[comment]: <> (Evaluate conditional independence of the rest of the arg)
 5) evaluate importance sampling framework, for example by having relate/argweaver with no recoms and high mutation rate, including checking the proposal density function (why not just comopute same likelihood with s=0. hmmmm.)
 6) check how well other arguments work, like the coal file.
 7) Then, add the emissions of the args on ancient data, only part that needs to change are the emissions.
