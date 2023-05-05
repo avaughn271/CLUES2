@@ -243,10 +243,17 @@ if __name__ == "__main__":
 		minargs = (timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax)
 
 		if len(S0) == 1:
-			res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.9,1.0,1.1],args=minargs, method = "Brent", tol = 1e-4))
-			S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
-			L = res.fun
-			print(S,L)
+			try:
+				res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.9,1.0,1.1],args=minargs, method = "Brent", tol = 1e-4))
+				S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
+				L = res.fun
+				print(S,L)
+			except ValueError:
+				print("Selection MLE not found in [-0.1,0.1], possibly due to noninformative data. Expanding search to [-1,1].")
+				res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.00000001,1.0,2.0],args=minargs, method = "Brent", tol = 1e-4))
+				S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
+				L = res.fun
+				print(S,L)
 		else:
 			res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
 			S = res.x
@@ -270,10 +277,17 @@ if __name__ == "__main__":
 		minargs = (timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax, Weights)
 
 		if len(S0) == 1:
-			res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.9,1.0,1.1],args=minargs, method = "Brent", tol = 1e-4))
-			S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
-			L = res.fun
-			print(S,L)
+			try:
+				res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.9,1.0,1.1],args=minargs, method = "Brent", tol = 1e-4))
+				S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
+				L = res.fun
+				print(S,L)
+			except ValueError:
+				print("Selection MLE not found in [-0.1,0.1], possibly due to noninformative data. Expanding search to [-1,1].")
+				res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.00000001,1.0,2.0],args=minargs, method = "Brent", tol = 1e-4))
+				S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
+				L = res.fun
+				print(S,L)
 		else:
 			res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
 			S = res.x
