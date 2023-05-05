@@ -281,10 +281,10 @@ if __name__ == "__main__":
 		numericloglik = -L
 		toprint = '%.4f'%(-L)
 
-	FirstLine = "logLR" + "\t" + "log10(p-value)"
+	FirstLine = "logLR" + "\t" + "-log10(p-value)"
 	epochnum = 1
 	degreesoffreedom = len(timeBins) - 1
-	toprint = toprint + "\t" + '%.2f'%((chi2.logsf(numericloglik + numericloglik, degreesoffreedom ) ) / np.log(10) )
+	toprint = toprint + "\t" + '%.2f'%(-(chi2.logsf(numericloglik + numericloglik, degreesoffreedom ) ) / np.log(10) )
 	for s,t,u in zip(S,timeBins[:-1],timeBins[1:]):
 		toprint = toprint + "\t" + '%d'%(t)
 		toprint = toprint + "\t" + '%d'%(u)
