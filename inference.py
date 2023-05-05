@@ -4,6 +4,7 @@ from scipy.special import logsumexp
 from scipy.optimize import minimize, minimize_scalar
 import argparse
 import os
+from scipy.stats import chi2
 
 def parse_args():
 	"""Define the Arguments"""
@@ -251,9 +252,9 @@ if __name__ == "__main__":
 			S = res.x
 			L = res.fun
 
-		toprint = []
+		toprint = '%.4f'%(-L+logL0)
+		numericloglik = -L+logL0
 
-		toprint.append('logLR: %.4f'%(-L+logL0) + "\n")
 		Weights = []
 	else:
 		M = times.shape[2]
@@ -277,16 +278,21 @@ if __name__ == "__main__":
 			res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
 			S = res.x
 			L = res.fun
+		numericloglik = -L
+		toprint = '%.4f'%(-L)
 
-		toprint = []
-
-		toprint.append('logLR: %.4f'%(-L) + "\n")
-	toprint.append('Epoch\tSelection MLE'+ "\n")
+	FirstLine = "logLR" + "\t" + "log10(p-value)"
+	epochnum = 1
+	degreesoffreedom = len(timeBins) - 1
+	toprint = toprint + "\t" + '%.2f'%((chi2.logsf(numericloglik + numericloglik, degreesoffreedom ) ) / np.log(10) )
 	for s,t,u in zip(S,timeBins[:-1],timeBins[1:]):
-		toprint.append('%d-%d\t%.5f'%(t,u,s)+ "\n")
-	
+		toprint = toprint + "\t" + '%d'%(t)
+		toprint = toprint + "\t" + '%d'%(u)
+		toprint = toprint + "\t" + '%.5f'%(s)
+		FirstLine = FirstLine + "\t" + "Epoch" + str(epochnum) + "_start" + "\t" +  "Epoch" + str(epochnum)   + "_end"  + "\t" +  "SelectionMLE" + str(epochnum)
+		epochnum = epochnum + 1
 	f = open(args.out+"_inference.txt", "w+")
-	f.writelines(toprint)
+	f.writelines(FirstLine  + "\n" + toprint + "\n")
 	f.close()
 
 	if not args.noAlleleTraj:
