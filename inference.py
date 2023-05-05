@@ -134,8 +134,8 @@ def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_l
 		M = tShape[2]
 		loglrs = np.zeros(M)
 		precompute = 0
+		tranmatrix = _nstep_log_trans_prob(N[0],sel[0],freqs,z_bins,z_logcdf,z_logsf) # this only handles the precompute case, just use initial values
 		if len(np.unique(N)) + len(np.unique(sel)) == 2:
-			tranmatrix = _nstep_log_trans_prob(N[0],sel[0],freqs,z_bins,z_logcdf,z_logsf) # this only handles the precompute case, just use initial values
 			precompute = 1
 		for i in range(M):
 			betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,tranmatrix,noCoals=noCoals,precomputematrixboolean=precompute,currFreq=currFreq)
@@ -176,8 +176,9 @@ def traj_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,
 		M = tShape[2]
 		loglrs = np.zeros(M)
 		postBySamples = np.zeros((F,T-1,M))
+		tranmatrix = _nstep_log_trans_prob(N[0],sel[0],freqs,z_bins,z_logcdf,z_logsf) # this only handles the precompute case, just use initial values
+		precompute = 0
 		if len(np.unique(N)) + len(np.unique(sel)) == 2:
-			tranmatrix = _nstep_log_trans_prob(N[0],sel[0],freqs,z_bins,z_logcdf,z_logsf) # this only handles the precompute case, just use initial values
 			precompute = 1
 		for i in range(M):
 			betaMat = backward_algorithm(sel,times[:,:,i],epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,tranmatrix,noCoals=noCoals,precomputematrixboolean=precompute,currFreq=currFreq)
@@ -257,11 +258,12 @@ if __name__ == "__main__":
 	else:
 		M = times.shape[2]
 		Weights = np.zeros(M)
+		precompute = 0
+		tranmatrix = _nstep_log_trans_prob(Ne[0],0.0,freqs,z_bins,z_logcdf,z_logsf) # this only handles the precompute case, just use initial values
 		if len(np.unique(Ne)) == 1:
-			tranmatrix = _nstep_log_trans_prob(Ne[0],0.0,freqs,z_bins,z_logcdf,z_logsf) # this only handles the precompute case, just use initial values
 			precompute = 1
 		for i in range(M):
-			betaMatl0 = backward_algorithm(np.zeros(len(Ne)),times[:,:,i],epochs,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,tranmatrix,noCoals=noCoals,precomputematrixboolean=1,currFreq=currFreq)
+			betaMatl0 = backward_algorithm(np.zeros(len(Ne)),times[:,:,i],epochs,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,tranmatrix,noCoals=noCoals,precomputematrixboolean=precompute,currFreq=currFreq)
 			Weights[i] = logsumexp(betaMatl0[-2,:])
 
 		minargs = (timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax, Weights)
