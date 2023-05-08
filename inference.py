@@ -98,7 +98,7 @@ def load_data(args):
 	# loading population size trajectory
 	if args.coal != None:
 		Nepochs = np.genfromtxt(args.coal,skip_header=1,skip_footer=1)
-		N = 0.5/np.genfromtxt(args.coal,skip_header=2)[2:-1]
+		N = 1/np.genfromtxt(args.coal,skip_header=2)[2:-1]
 		N = np.array(list(N)+[N[-1]])
 		Ne = N[np.digitize(epochs,Nepochs)-1]
 	else:
@@ -118,6 +118,7 @@ def load_data(args):
 
 def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax, Weights = []):
 	S = theta
+	print(S)
 	Sprime = np.concatenate((S,[0.0]))
 	if np.any(np.abs(Sprime) > sMax):
 		return np.inf
@@ -217,7 +218,7 @@ if __name__ == "__main__":
 	# optimize over selection parameters
 	T = len(timeBins)
 	S0 = 0.0 * np.ones(T-1)
-	opts = {'xatol':1e-4}
+	opts = {'gtol':1e-4}
 
 	if T == 2:
 		Simplex = np.reshape(np.array([-0.05,0.05]),(2,1))
@@ -229,8 +230,9 @@ if __name__ == "__main__":
 		Simplex[-1,:] = 0.01
 	else:
 		raise ValueError
+	opts['disp']=False
+	opts['maxiter']=6
 
-	opts['initial_simplex']=Simplex
 	ImpSamp = False
 	if times.shape[2] > 1:
 		print('\t(Importance sampling with M = %d samples)'%(times.shape[2]))
@@ -255,7 +257,7 @@ if __name__ == "__main__":
 				L = res.fun
 				print(S,L)
 		else:
-			res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
+			res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='BFGS')
 			S = res.x
 			L = res.fun
 
@@ -289,7 +291,7 @@ if __name__ == "__main__":
 				L = res.fun
 				print(S,L)
 		else:
-			res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
+			res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='BFGS')
 			S = res.x
 			L = res.fun
 		numericloglik = -L
