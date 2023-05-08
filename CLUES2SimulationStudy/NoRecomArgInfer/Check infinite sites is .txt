@@ -1,1 +1,0 @@
-check infinite sites assumption is satisfied in msprime.
