@@ -118,10 +118,9 @@ def load_data(args):
 
 def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax, Weights = []):
 	S = theta
-	print(S)
 	Sprime = np.concatenate((S,[0.0]))
 	if np.any(np.abs(Sprime) > sMax):
-		return np.inf
+		return 1e+100 *( 10**(np.max(np.abs(Sprime)))/sMax)
 	sel = Sprime[np.digitize(epochs,timeBins,right=False)-1]
 	tShape = times.shape
 	if tShape[2] == 0:
@@ -159,7 +158,7 @@ def traj_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,
 	Sprime = np.concatenate((S,[0.0]))
 	if np.any(np.abs(Sprime) > sMax):
 		print('WARNING: selection coefficient exceeds bounds. Maybe change --sMax?')
-		return np.inf
+		return 1e+308
 
 	sel = Sprime[np.digitize(epochs,timeBins,right=False)-1]
 	T = len(epochs)
