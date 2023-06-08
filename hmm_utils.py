@@ -85,14 +85,6 @@ def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf):
 		p1[i,:] = _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf)
 	return(p1)
 
-@njit('float64(float64[:],float64)')
-def _hap_genotype_likelihood_emission(ancGLs,p):
-    logGenoFreqs = np.array([np.log(1-p),np.log(p)])
-    emission = _logsumexp(logGenoFreqs + ancGLs)
-    if np.isnan(emission):
-        emission = -np.inf
-    return emission
-
 @njit('float64(float64[:],float64,float64)')
 def _genotype_likelihood_emission(ancGLs,logp, log1p):
 	"""ancGLs is a list of size 3. p is the derived allele frequency.
@@ -132,8 +124,8 @@ def _log_coal_density(times,n,epoch,xi,Ni,anc=0):
     logp += logPk
     return logp
 
-@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64)',cache=True)
-def forward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1):
+@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64)',cache=True)
+def forward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1):
 
     '''
     Moves forward in time from past to present
@@ -153,9 +145,9 @@ def forward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_
     cumGens = epochs[-1]
     
     nDer = np.sum(times[0,:]>=0)
-    nDerRemaining = nDer - np.sum(np.logical_and(times[0,:]>=0, times[0,:]<=epochs[-1])) ###??????????????
+    nDerRemaining = nDer - np.sum(np.logical_and(times[0,:]>=0, times[0,:]<=epochs[-1]))  - len(derSampledTimes[derSampledTimes > epochs[-1]])          ###??????????????
     nAnc = np.sum(times[1,:]>=0)+1
-    nAncRemaining = nAnc - np.sum(np.logical_and(times[1,:]>=0, times[1,:]<=epochs[-1]))
+    nAncRemaining = nAnc - np.sum(np.logical_and(times[1,:]>=0, times[1,:]<=epochs[-1]))  - len(ancSampledTimes[ancSampledTimes > epochs[-1]])  #OR PLUS??   
     coalEmissions = np.zeros(lf)
 
     for tb in range(T-1,0,-1):
@@ -197,14 +189,24 @@ def forward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_
         ancientGLrows = ancientGLs[np.logical_and(ancientGLs[:,0] <= cumGens, ancientGLs[:,0] > cumGens - 1.0)]
         ancientHapGLrows = ancientHapGLs[np.logical_and(ancientHapGLs[:,0] <= cumGens, ancientHapGLs[:,0] > cumGens - 1.0)]
 
+
+        ancientHapGLrowsDerived = derSampledTimes[derSampledTimes > cumGens - 1.0]
+        ancientHapGLrowsDerived = ancientHapGLrowsDerived[ancientHapGLrowsDerived <= cumGens]
+        ancientHapGLrowsAncestral = ancSampledTimes[ancSampledTimes > cumGens - 1.0]
+        ancientHapGLrowsAncestral = ancientHapGLrowsAncestral[ancientHapGLrowsAncestral <= cumGens]
+
+
+
         # calculate ancient GL emission probs
         glEmissions = np.zeros(lf)
         
         for j in range(lf):
             for iac in range(ancientGLrows.shape[0]):
                 glEmissions[j] += _genotype_likelihood_emission(ancientGLrows[iac,1:],logfreqs[j],log1minusfreqs[j])
-            for iac in range(ancientHapGLrows.shape[0]):
-                glEmissions[j] += _hap_genotype_likelihood_emission(ancientHapGLrows[iac,1:],freqs[j])
+            for iac in range(len(ancientHapGLrowsDerived)):
+                glEmissions[j] += np.log(freqs[j])
+            for iac in range(len(ancientHapGLrowsAncestral)):
+                glEmissions[j] += np.log(1 - freqs[j])
                 
         # calculate coal emission probs
         
@@ -217,8 +219,23 @@ def forward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_
             ancCoals = np.copy(times[1,:])
             ancCoals = ancCoals[ancCoals <= cumGens]
             ancCoals = ancCoals[ancCoals > cumGens-1.0]
-            nDerRemaining += len(derCoals) ###??????????????????????????????????????
+
+
+
+            numberofsampledder = derSampledTimes
+            numberofsampledder = numberofsampledder[numberofsampledder > cumGens - 1.0]
+            numberofsampledder = len(numberofsampledder[numberofsampledder <= cumGens])
+
+            numberofsampledanc = ancSampledTimes
+            numberofsampledanc = numberofsampledanc[numberofsampledanc > cumGens - 1.0]
+            numberofsampledanc = len(numberofsampledanc[numberofsampledanc <= cumGens])
+
+            nDerRemaining += len(derCoals)
             nAncRemaining += len(ancCoals)
+
+            nDerRemaining -= numberofsampledder
+            nAncRemaining -= numberofsampledanc
+
             for j in range(lf):
                     if nDerRemaining > 1: # if multiple derived lineages, all is good
                         coalEmissions[j] = _log_coal_density(derCoals,nDerRemaining,epoch,freqs[j],Nt,anc=0)
@@ -254,8 +271,8 @@ def forward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_
         alphaMat[tb,:] = alpha
     return alphaMat
     
-@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],float64[:,:],int64,int64,float64)',cache=True)
-def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,TRANMATRIX, noCoals=1,precomputematrixboolean=0,currFreq=-1):
+@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],float64[:,:],int64,int64,float64)',cache=True)
+def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,TRANMATRIX, noCoals=1,precomputematrixboolean=0,currFreq=-1):
 
     '''
     Moves backward in time from present to past
@@ -281,10 +298,9 @@ def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z
     
     cumGens = 0
     
-    nDer = np.sum(times[0,:]>=0)
-    nDerRemaining = nDer
-    nAnc = np.sum(times[1,:]>=0)+1
-    nAncRemaining = nAnc
+    nDerRemaining = np.sum(times[0,:]>=0) - len(derSampledTimes)
+    nAncRemaining = np.sum(times[1,:]>=0) + 1 - len(ancSampledTimes)
+
     coalEmissions = np.zeros(lf)
     for tb in range(0,T):
         Nt = N[tb]
@@ -326,15 +342,19 @@ def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z
         ancientGLrows = ancientGLs[ancientGLs[:,0] > cumGens]
         ancientGLrows = ancientGLrows[ancientGLrows[:,0] <= cumGens + 1.0]
 
-        ancientHapGLrows = ancientHapGLs[ancientHapGLs[:,0] > cumGens]
-        ancientHapGLrows = ancientHapGLrows[ancientHapGLrows[:,0] <= cumGens + 1.0]
+        ancientHapGLrowsDerived = derSampledTimes[derSampledTimes > cumGens]
+        ancientHapGLrowsDerived = ancientHapGLrowsDerived[ancientHapGLrowsDerived <= cumGens + 1.0]
+        ancientHapGLrowsAncestral = ancSampledTimes[ancSampledTimes > cumGens]
+        ancientHapGLrowsAncestral = ancientHapGLrowsAncestral[ancientHapGLrowsAncestral <= cumGens + 1.0]
 
         glEmissions = np.zeros(lf)
         for j in range(lf):
             for iac in range(ancientGLrows.shape[0]):
                 glEmissions[j] += _genotype_likelihood_emission(ancientGLrows[iac,1:],logfreqs[j],log1minusfreqs[j])
-            for iac in range(ancientHapGLrows.shape[0]):
-                glEmissions[j] += _hap_genotype_likelihood_emission(ancientHapGLrows[iac,1:],freqs[j])
+            for iac in range(len(ancientHapGLrowsDerived)):
+                glEmissions[j] += np.log(freqs[j])
+            for iac in range(len(ancientHapGLrowsAncestral)):
+                glEmissions[j] += np.log(1 - freqs[j])
         
         #grab coal times during epoch
         # calculate coal emission probs
@@ -371,9 +391,22 @@ def backward_algorithm(sel,times,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z
                             coalEmissions[j] = _log_coal_density(ancCoals,nAncRemaining+1,epoch,freqs[j],Nt,anc=1) # run with 2 ancestral lineages
                     else:
                         print("Incorrect Polarization of Alleles!")
-                    
+            
+            numberofsampledder = derSampledTimes
+            numberofsampledder = numberofsampledder[numberofsampledder > cumGens]
+            numberofsampledder = len(numberofsampledder[numberofsampledder <= cumGens + 1.0])
+
+            numberofsampledanc = ancSampledTimes
+            numberofsampledanc = numberofsampledanc[numberofsampledanc > cumGens]
+            numberofsampledanc = len(numberofsampledanc[numberofsampledanc <= cumGens + 1.0])
+
+            #print(cumGens,numberofsampledder,numberofsampledanc)
             nDerRemaining -= len(derCoals)
             nAncRemaining -= len(ancCoals)
+
+            nDerRemaining += numberofsampledder
+            nAncRemaining += numberofsampledanc
+
         ###Here, we try to do the same bounds of summation as before.
         lower2 = 0
         upper2 = len(freqs)
