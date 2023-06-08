@@ -47,7 +47,7 @@ def load_times(readtimes):
 	Lines = file1.readlines()
 	if "," not in Lines[0]:
 		DerivedSampleTimes = Lines[0]
-		if len(DerivedSampleTimes) == 0:
+		if DerivedSampleTimes == "\n":
 			derstimes = np.array([])
 		else:
 			DerivedSampleTimes = DerivedSampleTimes.split(";")
@@ -55,7 +55,7 @@ def load_times(readtimes):
 			for i in range(len(derstimes)):
 				derstimes[i] = float(DerivedSampleTimes[i])
 		AncestralSampleTimes = Lines[1]
-		if len(AncestralSampleTimes) == 0:
+		if AncestralSampleTimes == "\n":
 			ancstimes = np.array([])
 		else:
 			AncestralSampleTimes = AncestralSampleTimes.split(";")
@@ -80,7 +80,6 @@ def load_times(readtimes):
 			dertimes[i,m] = float(der[i])
 		for i in range(len(anc)):
 			anctimes[i,m] = float(anc[i])
-
 	return(np.array([dertimes,anctimes]),derstimes,ancstimes)
 	#locus time is an array that has dimensions 2 by (total number of leaves) by (number of importance samples)
 	#The first row corresponds to the derived alleles. The columns are populated by daf-1 and n-daf-1 entries each, and are then -1 below this value.
