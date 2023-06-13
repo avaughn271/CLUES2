@@ -140,8 +140,6 @@ $ python PATH/inference.py
 
 **--timeBins** A file containing one nonnegative number per line, in increasing order. These give the endpoints of the disjoint time intervals in which independent selection coefficients will be inferred. An example file is:
 
-**--noAlleleTraj** If this flag is used, the inferred allele trajectories will not be estimated. This saves some computational time as we do not need to run the backward algorithm. Only the inference file will be produced, not the freqs or post files.
-
 ```bash
 0.0
 50.0
@@ -152,21 +150,27 @@ for which 3 separate selection coefficients will be inferred one each for the in
 
 **--out** The prefix of the output files.
 
+**--noAlleleTraj** If this flag is used, the inferred allele trajectories will not be estimated. This saves some computational time as we do not need to run the backward algorithm. Only the inference file will be produced, not the freqs or post files.
+
 ## This step will produce (in the current working directory)
 
 ***out_inference.txt*** A file resembling the following:
 
 ```bash
-logLR: 122.4629
-Epoch	Selection MLE
-0-2000	0.00497
+logLR -log10(p-value) Epoch1_start Epoch1_end SelectionMLE1
+0.3273 0.38 0 1000 0.00162
 ```
+It is a tab-delimited file listing the log-likelihood ratio of selection to no selection, -log10(p) as computed from the log likelihood ratio using the tail of a chi-squared distribution, a list of epoch endpoints, and the MLE estimate of the selection coefficient. If more timeBins are used, the file would look something like this:
 
-where the log-likelihood ratio of selection to no selection is listed. The MLE of the selection coefficient is also given for each epoch, as described by the **timeBins** option.
+```bash
+logLR -log10(p-value) Epoch1_start Epoch1_end SelectionMLE1 Epoch2_start Epoch2_end SelectionMLE2 Epoch3_start Epoch3_end SelectionMLE3
+176.4062 75.44 0 200 0.01068 200 600 -0.00050 600 5000 -0.00576
+```
+where selection MLEs are listed to the immediate right of the epoch start and end points.
 
-***out_freqs.txt*** A file containing **df** lines, with each representing one of the discretized allele frequency bins. 
+***out_freqs.txt*** A file containing **df** lines, with each representing one of the discretized allele frequency bins. Not produced if the **--noAlleleTraj**  flag is used.
 
-***out_post.txt*** A file containing **df** lines, with each representing one containing **tCutoff** comma separated log probailities. The j'th column of the i'th row contains the log-probability of the derived allele being at frequency freqs[i] at j generations before the present, where freqs represent the frequencies given by the ***out_freqs.txt*** file. 
+***out_post.txt*** A file containing **df** lines, with each representing one containing **tCutoff** comma separated log probailities. The j'th column of the i'th row contains the log-probability of the derived allele being at frequency freqs[i] at j generations before the present, where freqs represent the frequencies given by the ***out_freqs.txt*** file.  Not produced if the **--noAlleleTraj**  flag is used. 
 
 ## (3) Plot inferred allele frequency trajectory.
 
