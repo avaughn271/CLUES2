@@ -140,6 +140,8 @@ $ python PATH/inference.py
 
 **--timeBins** A file containing one nonnegative number per line, in increasing order. These give the endpoints of the disjoint time intervals in which independent selection coefficients will be inferred. An example file is:
 
+**--noAlleleTraj** If this flag is used, the inferred allele trajectories will not be estimated. This saves some computational time as we do not need to run the backward algorithm. Only the inference file will be produced, not the freqs or post files.
+
 ```bash
 0.0
 50.0
