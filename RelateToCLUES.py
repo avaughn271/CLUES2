@@ -129,6 +129,41 @@ def OneTreeToList2(Newick,IsDerived):
     AncString=AncString[:-1] + "\n"
     return(DerString, AncString)
 
+def calculateageofsamples(newickstring, NewIsDerived):
+    # First, read in the tree
+    tree = Phylo.read(StringIO(newickstring), 'newick')
+    # Get the leaves
+    leaves = tree.get_terminals()
+    L = len(leaves)
+    # Create a L by L matrix to store the pairwise TMRCA
+    # For each pair of leaves, get the TMRCA
+    MaxDepth = -1
+    for i in tree.depths().keys():
+        if tree.depths()[i] > MaxDepth:
+            MaxDepth = tree.depths()[i] 
+
+    LeafNames = []
+    for i in range(L):
+        LeafNames.append(int(leaves[i].name))
+    # Return the matrix
+
+    LeafDepths = []
+    for i in range(L):
+        LeafDepths.append((MaxDepth - ((tree.depths())[tree.common_ancestor(leaves[i].name, leaves[i].name)])))
+    IsDerivedReOrder = []
+    for i in range(len(LeafNames)):
+        IsDerivedReOrder.append(NewIsDerived[LeafNames[i]])
+
+    DERIVEDTIMES = []
+    ANCESTRALTIMES = []
+    for i in range(len(LeafDepths)):
+        if LeafDepths[i] > 1.0:
+            if IsDerivedReOrder[i] == 1:
+                DERIVEDTIMES.append(str(LeafDepths[i]))
+            else:
+                ANCESTRALTIMES.append(str(LeafDepths[i]))
+    return DERIVEDTIMES,ANCESTRALTIMES
+
 if __name__ == "__main__":
     args = parse_args()                    
     isder = np.loadtxt(args.DerivedFile)
@@ -226,7 +261,23 @@ if __name__ == "__main__":
                 print("Flipped leaf " + str(i) + " from ancestral (0) to derived (1).")
             if NewIsDerived[i] < IsDerived[i]:
                 print("Flipped leaf " + str(i) + " from derived (1) to ancestral (0).")
-        
+
+
+    newicktreetemp = (Lines[0].split("\t"))
+    newicktreetemp = newicktreetemp[len(newicktreetemp)-1]
+    DERIVEDTIMES,ANCESTRALTIMES = calculateageofsamples(newicktreetemp[:-1], NewIsDerived)
+
+    if len(DERIVEDTIMES) + len(ANCESTRALTIMES) > 0:
+        if len(DERIVEDTIMES) == 1:
+            print(str(len(DERIVEDTIMES)) + " ancient haplotype found with derived allele." )
+        else:
+            print(str(len(DERIVEDTIMES)) + " ancient haplotypes found with derived allele." )
+        if len(ANCESTRALTIMES) == 1:
+            print(str(len(ANCESTRALTIMES)) + " ancient haplotype found with ancestral allele." )
+        else:
+            print(str(len(ANCESTRALTIMES)) + " ancient haplotypes found with ancestral allele." )
+        TotalStrings.extend(DERIVEDTIMES  + ["\n"])
+        TotalStrings.extend(ANCESTRALTIMES + ["\n"])
     for i in range(len(Lines)):
         newicktree = (Lines[i].split("\t"))
         newicktree = newicktree[len(newicktree)-1]
