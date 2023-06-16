@@ -276,8 +276,16 @@ if __name__ == "__main__":
             print(str(len(ANCESTRALTIMES)) + " ancient haplotype found with ancestral allele." )
         else:
             print(str(len(ANCESTRALTIMES)) + " ancient haplotypes found with ancestral allele." )
-        TotalStrings.extend(DERIVEDTIMES  + ["\n"])
-        TotalStrings.extend(ANCESTRALTIMES + ["\n"])
+        derivedtimestring=""
+        for iiivv in range(len(DERIVEDTIMES)):
+            derivedtimestring = derivedtimestring + str(DERIVEDTIMES[iiivv]) + ";"
+        derivedtimestring = derivedtimestring[:-1] + "\n"
+        ancestraltimestring=""
+        for iiivv in range(len(ANCESTRALTIMES)):
+            ancestraltimestring = ancestraltimestring + str(ANCESTRALTIMES[iiivv]) + ";"
+        ancestraltimestring = ancestraltimestring[:-1] + "\n"
+        TotalStrings.append(derivedtimestring)
+        TotalStrings.append(ancestraltimestring)
     for i in range(len(Lines)):
         newicktree = (Lines[i].split("\t"))
         newicktree = newicktree[len(newicktree)-1]
