@@ -265,6 +265,8 @@ if __name__ == "__main__":
             print(str(len(ANCESTRALTIMES)) + " ancient haplotype found with ancestral allele." )
         else:
             print(str(len(ANCESTRALTIMES)) + " ancient haplotypes found with ancestral allele." )
+        DERIVEDTIMES.sort()
+        ANCESTRALTIMES.sort()
         derivedtimestring=""
         for iiivv in range(len(DERIVEDTIMES)):
             derivedtimestring = derivedtimestring + str(DERIVEDTIMES[iiivv]) + ";"
