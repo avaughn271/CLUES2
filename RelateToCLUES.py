@@ -65,60 +65,49 @@ def CalculateAncestralBelow(List, nodee, nodeeindex):
         CalculateAncestralBelow(List, List[0][child2index], child2index)
         List[4][nodeeindex] = List[4][child1index] + List[4][child2index]
 
-def NewickToTMRCAMAtrix(newickstring):
-    # First, read in the tree
-    tree = Phylo.read(StringIO(newickstring), 'newick')
-    # Get the leaves
-    leaves = tree.get_terminals()
-    L = len(leaves)
-    # Create a L by L matrix to store the pairwise TMRCA
-    TMRCA = np.zeros((L, L))
-    # For each pair of leaves, get the TMRCA
-    MaxDepth = -1
-    for i in tree.depths().keys():
-        if tree.depths()[i] > MaxDepth:
-            MaxDepth = tree.depths()[i] 
-
-    LeafNames = []
-    for i in range(L):
-        LeafNames.append(int(leaves[i].name))
-    for i in range(L-1):
-        for j in range(i+1, L):
-            TMRCA[i, j] = MaxDepth - ((tree.depths())[tree.common_ancestor(leaves[i].name, leaves[j].name)])
-            #TMRCA[i, j] = round(tree.distance(leaves[i], leaves[j]) / 2.0 , 3) # round to account for rounding problems
-    # Return the matrix
-    return TMRCA, LeafNames
-
-def converttofile(TMRCA ,LeafNames, IsDerived):
-    numleafs = len(LeafNames)
-    Derivedbranches = []
-    Ancestralbrnaches = []
-    Mixed = []
-    for leaf1 in range(numleafs-1):
-        for leaf2 in range(leaf1 + 1, numleafs):
-            if IsDerived[LeafNames[leaf1]] == 1 and IsDerived[LeafNames[leaf2]] == 1:
-                Derivedbranches.append(TMRCA[leaf1, leaf2])
-            elif IsDerived[LeafNames[leaf1]] == 0 and IsDerived[LeafNames[leaf2]] == 0:
-                Ancestralbrnaches.append(TMRCA[leaf1, leaf2])
-            else:
-                Mixed.append(TMRCA[leaf1, leaf2])
-
-    Ancestralbrnaches = (np.unique(Ancestralbrnaches))
-    Derivedbranches = (np.unique(Derivedbranches))
-    Mixedtemp = (np.unique(Mixed))
-    if not (len(Ancestralbrnaches) + len(Derivedbranches) == numleafs - 2):
-        print("Infinite sites assumption not satisfied. Incorrect output will follow.")
-    Mixed = []
-    for element in Mixedtemp:
-        if element not in Ancestralbrnaches and element not in Derivedbranches:
-            Mixed.append(element)
-    if not (len(Ancestralbrnaches) + len(Derivedbranches) + len(Mixed) == numleafs - 1):
-        print("Infinite sites assumption not satisfied. Incorrect output will follow.")
-    return(np.sort(Ancestralbrnaches), np.sort(np.concatenate((Derivedbranches, Mixed))))
-
 def OneTreeToList2(Newick,IsDerived):
-    A = NewickToTMRCAMAtrix(Newick)
-    Ancestralbrnaches,Derivedbranches = converttofile(A[0], A[1], IsDerived)
+    IsDerivedIndices = []
+    for i in range(len(IsDerived)):
+        if IsDerived[i] == 1:
+            IsDerivedIndices.append(i)
+    treee = Phylo.read(StringIO(Newick), 'newick')
+    depths = []
+    Children  = []
+    DerivedI = []
+    AncestralI = []
+    indexx = 0
+    DERIVEDTMRCA = ""
+
+    TREEDEPTHS = treee.depths()
+    MaxDepth = -1
+    for i in TREEDEPTHS.keys():
+        if TREEDEPTHS[i] > MaxDepth:
+            MaxDepth = TREEDEPTHS[i]
+    for clade in treee.get_nonterminals():
+        depth = treee.distance(clade)
+        depths.append(depth)
+        descendants = [int(leaf.name) for leaf in clade.get_terminals()]
+        if (any(elem not in IsDerivedIndices for elem in descendants)):
+            AncestralI.append(indexx)
+        else:
+            DerivedI.append(indexx)
+            if len(descendants) == np.sum(IsDerived):
+                DERIVEDTMRCA = clade
+        indexx = indexx + 1
+
+    for i in range(len(depths)):
+        depths[i] = MaxDepth - depths[i]
+    indexx = 0
+    for clade in treee.get_nonterminals():
+        if DERIVEDTMRCA in clade:
+            MIXEDLIENAGEindex = indexx
+        indexx = indexx + 1
+    AncestralI.pop(MIXEDLIENAGEindex)
+    DerivedI.append(MIXEDLIENAGEindex)
+
+    Ancestralbrnaches = (np.sort(np.array(depths)[AncestralI]))
+    Derivedbranches = (np.sort(np.array(depths)[DerivedI]))
+
     AncString = ""
     DerString = ""
     for time in Ancestralbrnaches:
