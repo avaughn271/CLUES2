@@ -148,9 +148,9 @@ def calculateageofsamples(newickstring, NewIsDerived):
     for i in range(len(LeafDepths)):
         if LeafDepths[i] > 1.0:
             if IsDerivedReOrder[i] == 1:
-                DERIVEDTIMES.append(str(LeafDepths[i]))
+                DERIVEDTIMES.append(float(LeafDepths[i]))
             else:
-                ANCESTRALTIMES.append(str(LeafDepths[i]))
+                ANCESTRALTIMES.append(float(LeafDepths[i]))
     return DERIVEDTIMES,ANCESTRALTIMES
 
 if __name__ == "__main__":
