@@ -11,6 +11,7 @@ parser.add_argument('--post',type=str)
 parser.add_argument('--figure',type=str)
 parser.add_argument('--posterior_intervals', default=[0.25, 0.5, 0.75, 0.95, 0.999], type=float, nargs='+',
                     help='The posterior thresholds for which to draw different consensus trees.')
+parser.add_argument('--generation_time', default=-1.0, type=float, help='Conversion to generation time.')
 args = parser.parse_args()
 ConfidenceIntervals = []
 ColorIntensity = []
@@ -59,10 +60,17 @@ for indexx in range(len(ConfidenceIntervals)):
             if j >= currentlow and j <= currenthigh:
                 MATRIXTOPLOT[j, int(timeinterval)] = np.max([MATRIXTOPLOT[j, int(timeinterval)], ColorIntensity[indexx]])
 
-plt.pcolormesh(epochs[:-1],freqs, MATRIXTOPLOT)
-plt.axis((0,len(epochs[:-1]),0,1.0))
-plt.ylabel('Derived allele frequency',fontsize=20)
-plt.xlabel('Generations before present',fontsize=20)
+if args.generation_time == -1.0:
+    plt.pcolormesh(epochs[:-1],freqs, MATRIXTOPLOT)
+    plt.axis((0,len(epochs[:-1]),0,1.0))
+    plt.ylabel('Derived allele frequency',fontsize=20)
+    plt.xlabel('Generations before present',fontsize=20)
+else:
+    plt.pcolormesh(epochs[:-1] * args.generation_time,freqs, MATRIXTOPLOT)
+    plt.axis((0,len(epochs[:-1]) * args.generation_time,0,1.0))
+    plt.ylabel('Derived allele frequency',fontsize=20)
+    plt.xlabel('Years before present',fontsize=20)
+
 plt.xticks(fontsize=18)
 plt.yticks(fontsize=18)
 
