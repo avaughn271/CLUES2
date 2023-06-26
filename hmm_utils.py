@@ -445,8 +445,8 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
                 if upperindex[upin] > lowerbounddd:
                     lower2 = upin
                     break
-            upper2 = min(lf, round(upper2 + lf/20))
-            lower2 = max(0, round(lower2  - lf/20))
+            upper2 = min(lf, round(upper2 + lf/10))
+            lower2 = max(0, round(lower2  - lf/10))
             if nDerRemaining == 1:
                 lower2 = min(lower2, 0)
 
