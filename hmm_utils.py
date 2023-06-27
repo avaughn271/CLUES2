@@ -49,7 +49,7 @@ def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf):
     logP[0] = np.interp(np.array([(FREQS[0]-mu)/sigma]),z_bins,z_logcdf)[0]
     logP[lf-1] = np.interp(np.array([(FREQS[lf-1]-mu)/sigma]),z_bins,z_logsf)[0]
 
-    maximumabsolutefrequencychangepergeneration = 0.05
+    maximumabsolutefrequencychangepergeneration = 0.05 #Approximation 1.
     lowerfrequencybound = mu - maximumabsolutefrequencychangepergeneration
     upperfrequnecybound = mu + maximumabsolutefrequencychangepergeneration
     lowerindex = np.argmin(np.abs(np.subtract(FREQS, lowerfrequencybound)))
@@ -162,7 +162,7 @@ def forward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,l
             currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)
             upperindex = np.zeros(lf)
             lowerindex = np.zeros(lf)
-            maximumabsoluteprobabilityconcentration =  0.999
+            maximumabsoluteprobabilityconcentration =  0.999  #Approximation 2a
             for ii in range(lf):
                 exprow = np.exp(currTrans[ii,:])  # note that the indexing here is reversed as opposed to the backward, because the usage of currtrans is transposed!!!
                 exprowsum = np.sum(exprow) * maximumabsoluteprobabilityconcentration
@@ -288,6 +288,8 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
              maxdistance = distt
              indexofcurrent = i
     alpha[indexofcurrent] = 0.0 # index of all -Infs except freq bin closest to the true current freq
+    currentminindex = indexofcurrent
+    currentmaxindex = indexofcurrent
 
     T = len(epochs)-1
     alphaMat = np.full((T+1,lf), -1e20)
@@ -314,7 +316,7 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
                 currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)   # note that the indexing here is reversed as opposed to the forward, because the usage of currtrans is transposed!!!
             upperindex = np.zeros(lf)
             lowerindex = np.zeros(lf)
-            maximumabsoluteprobabilityconcentration = 0.999
+            maximumabsoluteprobabilityconcentration = 0.999  #Approximation 2b
             for ii in range(lf):
                 exprow = np.exp(currTrans[:,ii]) ###deleted exp
                 exprowsum = np.sum(exprow) * maximumabsoluteprobabilityconcentration
@@ -407,54 +409,33 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
             nDerRemaining += numberofsampledder
             nAncRemaining += numberofsampledanc
 
-        ###Here, we try to do the same bounds of summation as before.
-        lower2 = 0
-        upper2 = len(freqs)
+        #if precomputematrixboolean == 1: # should only do this in importance sampling case.
+        upperbounddd = round(min(lf, currentmaxindex + lf/19.0))  #Approximation 3. Set this to lf and next line to 0 to turn off the beam search.
+        lowerbounddd = round(max(0, currentminindex - lf/19.0))
+        #print(tb, lowerbounddd, upperbounddd, currentminindex, currentmaxindex)
+        if nDerRemaining == 1:
+            lowerbounddd = min(lowerbounddd, 0)
 
-        if precomputematrixboolean == 1: # should only do this in importance sampling case.
-            maxbackwardtransition = 0.999
-            lowerbounddd = np.argmax(prevAlpha)
-            upperboundd = lowerbounddd + 1
-            maxelement = prevAlpha[lowerbounddd]
-            exprow = np.exp(prevAlpha - maxelement)
-            exprowsum = np.sum(exprow) * maxbackwardtransition
-            totalsumm = exprow[lowerbounddd]
-            while (totalsumm < exprowsum):
-                if lowerbounddd == 0:
-                    totalsumm = totalsumm + exprow[upperboundd]
-                    upperboundd = upperboundd + 1
-                elif upperboundd == lf:
-                    lowerbounddd = lowerbounddd - 1
-                    totalsumm = totalsumm + exprow[lowerbounddd]
-                elif exprow[lowerbounddd - 1] >= exprow[upperboundd]:
-                    lowerbounddd = lowerbounddd - 1
-                    totalsumm = totalsumm + exprow[lowerbounddd]
-                else:
-                    totalsumm = totalsumm + exprow[upperboundd]
-                    upperboundd = upperboundd + 1
-            lowerbounddd = max(0, lowerbounddd - 3)
-            upperboundd = min(lf - 1, upperboundd + 3)
-            #############################################
-            upper2 = -1
-            for upin in range(lf-1,-1, -1):
-                if lowerindex[upin] < upperboundd:
-                    upper2 = upin
-                    break
-            lower2 = -1
-            for upin in range(lf):
-                if upperindex[upin] > lowerbounddd:
-                    lower2 = upin
-                    break
-            upper2 = min(lf, round(upper2 + lf/10))
-            lower2 = max(0, round(lower2  - lf/10))
-            if nDerRemaining == 1:
-                lower2 = min(lower2, 0)
-
-        #########################################
-        for i in range(lower2,upper2):
+        ####################################
+        alpahmax = -1e20 
+        for i in range(lowerbounddd,upperbounddd):
             alpha[i] = _logsumexp(prevAlpha[lowerindex[i]:upperindex[i]] + currTrans[lowerindex[i]:upperindex[i],i]) + glEmissions[i] + coalEmissions[i]
+            if alpha[i] > alpahmax:
+                alpahmax = alpha[i]
             if np.isnan(alpha[i]):
                 alpha[i] = -np.inf
+        boundss = alpahmax - 200.0
+        #print(boundss)
+        for i in range(0,lf):
+            if alpha[i] > boundss:
+                currentminindex = i
+                break
+        #print(np.max(alpha) , _logsumexp(alpha))
+        #print(alpha )
+        for i in range(lf,0,-1):
+            if alpha[i] > boundss:
+                currentmaxindex = i
+                break
 
         prevNt = Nt
         prevst = st
