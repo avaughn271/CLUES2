@@ -106,9 +106,9 @@ $ python PATH/RelateToCLUES.py
 
 ## This step will produce (in the current working directory)
 
-***out*** **_times.txt** A file resembling the input file for derived and ancestral coalescent times described above. You may run this script with *--RelateSamples example/example.newick* and *--DerivedFile example/IsDerived.txt* to see how the script works.
+***out*** **_times.txt** A file resembling the input file for derived and ancestral coalescent times described above.
 
-The script will also flip the allelic states as necessary in order to enforce the infinite sites assumption. If no flips are necessary, the message "Infinite sites assumption satisfied. No allele flips necessary." will be printed. Otherwise, we will print the number of total flips we are making and the exact indices of the leaves we are flipping. If allele flips are necessary, we will also produce a file ***out*** **_derived.txt** which will be equivalent to the **--DerivedFile** input file, but with the alleles changed according to the necessary allele flips.
+The script will also flip the allelic states of the minimum number of leaf nodes as necessary in order to enforce the infinite sites assumption. If no flips are necessary, the message "Infinite sites assumption satisfied. No allele flips necessary." will be printed. Otherwise, we will print the number of total flips we are making and the exact indices of the leaves we are flipping. If allele flips are necessary, we will also produce a file ***out*** **_derived.txt** which will be equivalent to the **--DerivedFile** input file, but with the alleles changed according to the necessary allele flips. If ancient data is used, we also print the number of ancient haplotypes we find with the derived and ancestral alleles.
 
 
 
