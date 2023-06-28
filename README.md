@@ -86,7 +86,7 @@ Samples: These input files look like the following file. The first column is the
 
 ## Running CLUES
 
-CLUES has 4 steps:
+CLUES has 3 steps:
 
 ## (1) Obtain Input Files
 
