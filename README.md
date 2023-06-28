@@ -86,17 +86,11 @@ Samples: These input files look like the following file. The first column is the
 
 ## Running CLUES
 
-CLUES has 3 steps:
+CLUES has 4 steps:
 
-## (1) Preprocess Data
+## (1) Obtain Input Files
 
-The user will need to process their input data to generate a genotype sample or a set of samples of coalescence times. If you wish to use Relate to infer ARGs, we provide a script to convert the output of Relate importance sampling for the marginal tree at a given SNP. Please see the documentation of Relate [Relate v1.1](https://myersgroup.github.io/relate/) [[Speidel, *et al.* Nat. Gen. 2019]](https://www.nature.com/articles/s41588-019-0484-x), specifically the "Sample branch lengths" functionality. Use option "--format n" and set "--first_bp" and "--last_bp" to both be equal to the basepair position of your SNP of interest. We provide a script "RelateToCLUES.py" to convert the output file of this step to the input for CLUES2.
-
-
-
-
-
-
+The user will need to process their input data to generate a sample of ancient genotypes and/or a set of samples of coalescence times. If you wish to use Relate to infer ARGs, we provide a script (RelateToCLUES.py) to convert the output of Relate importance sampling for the marginal tree at a given SNP. Please see the documentation of Relate (https://myersgroup.github.io/relate/) [[Speidel, *et al.* Nat. Gen. 2019]](https://www.nature.com/articles/s41588-019-0484-x), specifically the "Sample branch lengths" functionality. Use option "--format n" and set "--first_bp" and "--last_bp" to both be equal to the basepair position of your SNP of interest. We provide a script "RelateToCLUES.py" to convert the output file of this step to the input for CLUES2.
 
 ```bash
 $ python PATH/RelateToCLUES.py
@@ -104,9 +98,9 @@ $ python PATH/RelateToCLUES.py
 
 ## This step takes as input:
 
-**--RelateSamples** The output file of the above Relate step.
+**--RelateSamples** The ".newick" output file of the above Relate step.
 
-**--DerivedFile** A file containing one line for each leaf. Considering the lines as 0-indexed, the i'th line is 0 if leaf i has the ancestral allele and is 1 if leaf i has the derived allele. This can often be read off directly from the VCF file line for the snp of interest.
+**--DerivedFile** A file containing one line for each leaf. Considering the lines as 0-indexed, the i'th line is 0 if leaf i has the ancestral allele and is 1 if leaf i has the derived allele. This can often be read off directly from the VCF file line for the snp of interest or the ".haps" input file to Relate, but be aware that the reference allele and the ancestral allele may be different. The ".mut" file of Relate will describe, for each SNP, which allele it is using as the ancestral allele and whether this SNP was flipped from the input polarization. Please double check this file to make sure that you are using the right allele as the derived allele.
 
 **--out**  The prefix of the output file.
 
