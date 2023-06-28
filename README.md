@@ -16,10 +16,15 @@ CLUES is written in Python and requires the following Python packages:
 See the following links for installation help:
 
 https://numba.readthedocs.io/en/stable/user/installing.html
+
 https://scipy.org/install/
+
 https://numpy.org/install/
+
 https://matplotlib.org/stable/index.html
+
 https://biopython.org/wiki/Download
+
 https://pandas.pydata.org/docs/getting_started/install.html
 
 ### Example commands
