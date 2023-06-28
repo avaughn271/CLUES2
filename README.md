@@ -35,7 +35,8 @@ TODO
 
 CLUES has been tested on two different input files: posterior samples of ARGs and historic allele genotypes. We describe the input files here:
 
-Times: These are the posterior samples of ARGs, more specifically the posterior samples of pairwise coalescence times at the specified SNP. We do not explicitly need the tree topology due to the exchangeability of lineages within the derived and ancestral classes. If you have $M$ samples from the posterior, this file will have $2M$ lines. If we iterate through the samples from  $m=0$ to $m=M-1$, the ($m+1$)'th line will be the coalescence times of derived lineages of the $m$'th sample. The ($m+2$)'th line will be the coalescence times of ancestral lineages of the $m$'th sample. For example, if we sample the following $M=3$ trees from the posterior:\
+Times: These are the posterior samples of ARGs, more specifically the posterior samples of pairwise coalescence times at the specified SNP. We do not explicitly need the tree topology due to the exchangeability of lineages within the derived and ancestral classes. If you have $M$ samples from the posterior, this file will have $2M$ lines. If we iterate through the samples from  $m=0$ to $m=M-1$, the ($m+1$)'th line will be the coalescence times of derived lineages of the $m$'th sample. The ($m+2$)'th line will be the coalescence times of ancestral lineages of the $m$'th sample. For example, if we sample the following $M=3$ trees from the posterior:
+
 
 <img src="https://github.com/avaughn271/CLUES2/blob/main/example/clues1.png">
 
