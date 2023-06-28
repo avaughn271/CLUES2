@@ -131,9 +131,9 @@ $ python PATH/inference.py
 
 ## This step takes as input:
 
-**--times** The input file of coalescent times as described above.
+**--times** The input file of coalescent times as described above. You can supply a **--times** file, or an **--ancientSamps** file, or both.
 
-**--ancientSamps** The input file of ancient genotype proabilities as described above.
+**--ancientSamps** The input file of ancient genotype proabilities as described above. You can supply a **--times** file, or an **--ancientSamps** file, or both.
 
 **--popFreq**  The modern derived allele frequency (corresponding to the allele 1, not 0).
 
