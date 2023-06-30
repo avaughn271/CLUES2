@@ -140,7 +140,6 @@ def load_data(args):
 
 def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes, Weights = []):
 	S = theta
-	print(S)
 	Sprime = np.concatenate((S,[0.0]))
 	if np.any(np.abs(Sprime) > sMax):
 		return 1e+100 *( 10**(np.max(np.abs(Sprime)))/sMax)
