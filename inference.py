@@ -140,6 +140,7 @@ def load_data(args):
 
 def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes, Weights = []):
 	S = theta
+	print(S)
 	Sprime = np.concatenate((S,[0.0]))
 	if np.any(np.abs(Sprime) > sMax):
 		return 1e+100 *( 10**(np.max(np.abs(Sprime)))/sMax)
@@ -239,20 +240,21 @@ if __name__ == "__main__":
 	# optimize over selection parameters
 	T = len(timeBins)
 	S0 = 0.0 * np.ones(T-1)
-	opts = {'gtol':1e-4}
+	opts = {}
 
 	if T == 2:
 		Simplex = np.reshape(np.array([-0.05,0.05]),(2,1))
 	elif T > 2:
 		Simplex = np.zeros((T,T-1))
 		for i in range(Simplex.shape[1]):
-			Simplex[i,:] = -0.01
+			Simplex[i,:] = 0.0
 			Simplex[i,i] = 0.01
-		Simplex[-1,:] = 0.01
+		Simplex[-1,:] = 0.0
 	else:
 		raise ValueError
 	opts['disp']=False
-	opts['maxiter']=10
+	opts['maxfev'] = (T - 1) * 20
+	opts['initial_simplex']=Simplex
 
 	ImpSamp = False
 	if times.shape[2] > 1:
@@ -278,7 +280,7 @@ if __name__ == "__main__":
 				L = res.fun
 				print(S,L)
 		else:
-			res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='BFGS')
+			res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
 			S = res.x
 			L = res.fun
 
@@ -312,7 +314,7 @@ if __name__ == "__main__":
 				L = res.fun
 				print(S,L)
 		else:
-			res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='BFGS')
+			res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
 			S = res.x
 			L = res.fun
 		numericloglik = -L
