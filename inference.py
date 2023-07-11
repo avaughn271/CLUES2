@@ -268,16 +268,19 @@ if __name__ == "__main__":
 
 		if len(S0) == 1:
 			try:
-				res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.9,1.05,1.1],args=minargs, method = "Brent", tol = 1e-4))
+				res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.9,1.0,1.1],args=minargs, method = "Brent", tol = 1e-4))
 				S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
 				L = res.fun
 				if times.shape[1] < 25: # with small number of samples, result function can be multimodal, so do multiple optims and take best.
-					res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.9,0.95,1.1],args=minargs, method = "Brent", tol = 1e-4))
-					Stemp = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
-					Ltemp = res.fun
-					if Ltemp < L:
-						S = Stemp
-						L = Ltemp
+					try:
+						res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [1.0001,1.005,1.02],args=minargs, method = "Brent", tol = 1e-4))
+						Stemp = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
+						Ltemp = res.fun
+						if Ltemp < L:
+							S = Stemp
+							L = Ltemp
+					except ValueError:
+						pass
 				print(S,L)
 			except ValueError:
 				print("Selection MLE not found in [-0.1,0.1], possibly due to noninformative data. Expanding search to [-1,1].")
@@ -313,12 +316,15 @@ if __name__ == "__main__":
 				S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
 				L = res.fun
 				if times.shape[1] < 25: # with small number of samples, result function can be multimodal, so do multiple optims and take best.
-					res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.9,0.95,1.1],args=minargs, method = "Brent", tol = 1e-4))
-					Stemp = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
-					Ltemp = res.fun
-					if Ltemp < L:
-						S = Stemp
-						L = Ltemp
+					try:
+						res = (minimize_scalar(likelihood_wrapper_scalar,  bracket = [1.0001,1.005,1.02] ,args=minargs, method = "Brent", tol = 1e-4))
+						Stemp = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
+						Ltemp = res.fun
+						if Ltemp < L:
+							S = Stemp
+							L = Ltemp
+					except ValueError:
+						pass
 				print(S,L)
 			except ValueError:
 				print("Selection MLE not found in [-0.1,0.1], possibly due to noninformative data. Expanding search to [-1,1].")
