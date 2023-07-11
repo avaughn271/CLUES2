@@ -23,20 +23,7 @@ def _logsumexpb(a,b):
 
 @njit('float64[:](int64,float64,float64,float64[:],float64[:],float64[:],float64[:])',cache=True)
 def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf):
-    """Standard logsumexp
-    INPUT: i - an index. ranges from 0 to df-1 inclusive. Index of frequency bin
-           N - diploid effective popualtion size (smaller one)
-           s - selection coefficient
-           FREQS - frequency discrete values as computed earlier
-           z_bins - some numbers spread between -1e5 and 1e5, more concentrated near 0. Length of 2198.
-           z_logcdf - log of standard normal CDF of z_bins
-           z_logsf - log of (1 - standard normal CDF) of z_bins
-    OUTPUT: The set of len(FREQS) transition probabilities.
-    conceptually, you calculate the resulting normal distribution. Any density greater than FREQS[df] is places on FREQS[df] 
-    Any probability mass less than FREQS[0] is placed on FREQS[0] Otherwise, midpoints between frequency bins are used
-    to round the resulting probability into a discrete bucket using the cdf.
-    """
-	# 1-generation transition prob based on Normal distn
+
 	
     p = FREQS[i]    #starting frequency
     lf = len(FREQS)  # number of freq bins
@@ -49,13 +36,7 @@ def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf):
     logP[0] = np.interp(np.array([(FREQS[0]-mu)/sigma]),z_bins,z_logcdf)[0]
     logP[lf-1] = np.interp(np.array([(FREQS[lf-1]-mu)/sigma]),z_bins,z_logsf)[0]
 
-    maximumabsolutefrequencychangepergeneration = 0.05 #Approximation 1.
-    lowerfrequencybound = mu - maximumabsolutefrequencychangepergeneration
-    upperfrequnecybound = mu + maximumabsolutefrequencychangepergeneration
-    lowerindex = np.argmin(np.abs(np.subtract(FREQS, lowerfrequencybound)))
-    upperindec = np.argmin(np.abs(np.subtract(FREQS, upperfrequnecybound)))
-
-    for j in range(max(lowerindex,1),min(lf-1, upperindec)):
+    for j in range(1,lf-1):
         if j == 1:
             mlo = FREQS[0]
         else:
@@ -85,23 +66,11 @@ def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf):
 		p1[i,:] = _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf)
 	return(p1)
 
-@njit('float64(float64[:],float64,float64)')
-def _genotype_likelihood_emission(ancGLs,logp, log1p):
-	"""ancGLs is a list of size 3. p is the derived allele frequency.
-	Returns the probability of the given emission"""
-
-	logGenoFreqs = np.array([log1p + log1p, 0.693147180559945309 + logp + log1p,logp + logp])
-	emission = _logsumexp(logGenoFreqs + ancGLs)
-	if np.isnan(emission):
-		emission = -np.inf
-	return emission
-
 @njit('float64(float64[:],int64,float64[:],float64,float64,int64)',cache=True)
 def _log_coal_density(times,n,epoch,xi,Ni,anc=0):
     if n == 1:
         # this flag indicates to ignore coalescence
         return 0.0
-    #print(times, n, epoch, xi,Ni, anc )  #set of times, n is number of lineages left of that lineage. epoch is [tb,tb+1]
     #xi is current frequency, #Ni is DIPLOID pop size (1/2 of the previous one.)
     logp = 0
     prevt = epoch[0]
@@ -124,153 +93,7 @@ def _log_coal_density(times,n,epoch,xi,Ni,anc=0):
     logp += logPk
     return logp
 
-@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64)',cache=True)
-def forward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1):
 
-    '''
-    Moves forward in time from past to present
-    ''' 
-    
-    lf = len(freqs)
-    alpha = np.ones(len(freqs)) # uniform probability of exiting at furthest time point.
-    alpha -= _logsumexp(alpha)
-    
-    T = len(epochs)-1
-    alphaMat = np.full((T+1,lf), -1e20)
-    alphaMat[-1,:] = alpha
-
-    prevNt = -1
-    prevst = -1
-    
-    cumGens = epochs[-1]
-    
-    nDer = np.sum(times[0,:]>=0)
-    nDerRemaining = nDer - np.sum(np.logical_and(times[0,:]>=0, times[0,:]<=epochs[-1]))  - len(derSampledTimes[derSampledTimes > epochs[-1]])          ###??????????????
-    nAnc = np.sum(times[1,:]>=0)+1
-    nAncRemaining = nAnc - np.sum(np.logical_and(times[1,:]>=0, times[1,:]<=epochs[-1]))  - len(ancSampledTimes[ancSampledTimes > epochs[-1]])  #OR PLUS??   
-    coalEmissions = np.zeros(lf)
-
-    for tb in range(T-1,0,-1):
-        epoch = np.array([cumGens - 1.0,cumGens])
-        Nt = N[tb]
-        
-        st = sel[tb]
-        prevAlpha = np.copy(alpha)
-
-        if prevNt != Nt or prevst != st:
-            #change in selection/popsize, recalc trans prob
-            currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)
-            upperindex = np.zeros(lf)
-            lowerindex = np.zeros(lf)
-            maximumabsoluteprobabilityconcentration =  0.999  #Approximation 2a
-            for ii in range(lf):
-                exprow = np.exp(currTrans[ii,:])  # note that the indexing here is reversed as opposed to the backward, because the usage of currtrans is transposed!!!
-                exprowsum = np.sum(exprow) * maximumabsoluteprobabilityconcentration
-                lowerbound = np.argmax(exprow)
-                upperbound = lowerbound + 1
-                totalsumm = exprow[lowerbound]
-                while (totalsumm < exprowsum):
-                    if lowerbound == 0:
-                        totalsumm = totalsumm + exprow[upperbound]
-                        upperbound = upperbound + 1
-                    elif upperbound == lf:
-                        lowerbound = lowerbound - 1
-                        totalsumm = totalsumm + exprow[lowerbound]
-                    elif exprow[lowerbound - 1] >= exprow[upperbound]:
-                        lowerbound = lowerbound - 1
-                        totalsumm = totalsumm + exprow[lowerbound]
-                    else:
-                        totalsumm = totalsumm + exprow[upperbound]
-                        upperbound = upperbound + 1
-                upperindex[ii] = upperbound
-                lowerindex[ii] = lowerbound
-        
-        #grab ancient GL rows
-        ancientGLrows = ancientGLs[np.logical_and(ancientGLs[:,0] <= cumGens, ancientGLs[:,0] > cumGens - 1.0)]
-        ancientHapGLrows = ancientHapGLs[np.logical_and(ancientHapGLs[:,0] <= cumGens, ancientHapGLs[:,0] > cumGens - 1.0)]
-
-
-        ancientHapGLrowsDerived = derSampledTimes[derSampledTimes > cumGens - 1.0]
-        ancientHapGLrowsDerived = ancientHapGLrowsDerived[ancientHapGLrowsDerived <= cumGens]
-        ancientHapGLrowsAncestral = ancSampledTimes[ancSampledTimes > cumGens - 1.0]
-        ancientHapGLrowsAncestral = ancientHapGLrowsAncestral[ancientHapGLrowsAncestral <= cumGens]
-
-
-
-        # calculate ancient GL emission probs
-        glEmissions = np.zeros(lf)
-        
-        for j in range(lf):
-            for iac in range(ancientGLrows.shape[0]):
-                glEmissions[j] += _genotype_likelihood_emission(ancientGLrows[iac,1:],logfreqs[j],log1minusfreqs[j])
-            for iac in range(len(ancientHapGLrowsDerived)):
-                glEmissions[j] += np.log(freqs[j])
-            for iac in range(len(ancientHapGLrowsAncestral)):
-                glEmissions[j] += np.log(1 - freqs[j])
-                
-        # calculate coal emission probs
-        
-        if noCoals:
-            coalEmissions = np.zeros(lf)
-        else:
-            derCoals = np.copy(times[0,:])
-            derCoals = derCoals[derCoals <= cumGens]
-            derCoals = derCoals[derCoals > cumGens-1.0]
-            ancCoals = np.copy(times[1,:])
-            ancCoals = ancCoals[ancCoals <= cumGens]
-            ancCoals = ancCoals[ancCoals > cumGens-1.0]
-
-
-
-            numberofsampledder = derSampledTimes
-            numberofsampledder = numberofsampledder[numberofsampledder > cumGens - 1.0]
-            numberofsampledder = len(numberofsampledder[numberofsampledder <= cumGens])
-
-            numberofsampledanc = ancSampledTimes
-            numberofsampledanc = numberofsampledanc[numberofsampledanc > cumGens - 1.0]
-            numberofsampledanc = len(numberofsampledanc[numberofsampledanc <= cumGens])
-
-            nDerRemaining += len(derCoals)
-            nAncRemaining += len(ancCoals)
-
-            nDerRemaining -= numberofsampledder
-            nAncRemaining -= numberofsampledanc
-
-            for j in range(lf):
-                    if nDerRemaining > 1: # if multiple derived lineages, all is good
-                        coalEmissions[j] = _log_coal_density(derCoals,nDerRemaining,epoch,freqs[j],Nt,anc=0)
-                        coalEmissions[j] += _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,anc=1)
-                    elif nDerRemaining == 0 and nAncRemaining == 1:
-                        if j != 0:
-                            coalEmissions[j] = -1e20 # derived allele freq must be 0.
-                    elif nDerRemaining == 0 and nAncRemaining > 1:
-                        if j != 0:
-                            coalEmissions[j] = -1e20 # derived allele freq must be 0.
-                        else:
-                            coalEmissions[j] = _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,anc=1) # run only ancestral
-                    elif nDerRemaining == 1 and nAncRemaining == 1:
-                        if j != 0:
-                            coalEmissions[j] = 0.0
-                        else:
-                            coalEmissions[j] = _log_coal_density(ancCoals,2,epoch,freqs[j],Nt,anc=1) # run with 2 ancestral lineages
-                    elif nDerRemaining == 1 and nAncRemaining > 1:
-                        if j != 0:
-                            coalEmissions[j] = _log_coal_density(ancCoals,nAncRemaining,epoch,freqs[j],Nt,anc=1)
-                        else:
-                            coalEmissions[j] = _log_coal_density(ancCoals,nAncRemaining+1,epoch,freqs[j],Nt,anc=1) # run with 2 ancestral lineages
-                    else:
-                        print("Incorrect Polarization of Alleles!")
-        for i in range(lf):
-            alpha[i] = _logsumexp(prevAlpha[lowerindex[i]:upperindex[i]] + currTrans[i,lowerindex[i]:upperindex[i]] + glEmissions[lowerindex[i]:upperindex[i]] + coalEmissions[lowerindex[i]:upperindex[i]])
-            if np.isnan(alpha[i]):
-                alpha[i] = -np.inf
-        
-        prevNt = Nt
-        prevst = st
-        cumGens -= 1.0
-        alphaMat[tb,:] = alpha
-    return alphaMat
-    
 @njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],float64[:,:],int64,int64,float64)',cache=True)
 def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,TRANMATRIX, noCoals=1,precomputematrixboolean=0,currFreq=-1):
 
@@ -288,8 +111,6 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
              maxdistance = distt
              indexofcurrent = i
     alpha[indexofcurrent] = 0.0 # index of all -Infs except freq bin closest to the true current freq
-    currentminindex = indexofcurrent
-    currentmaxindex = indexofcurrent
 
     T = len(epochs)-1
     alphaMat = np.full((T+1,lf), -1e20)
@@ -314,49 +135,6 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
                 currTrans = TRANMATRIX
             else:
                 currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)   # note that the indexing here is reversed as opposed to the forward, because the usage of currtrans is transposed!!!
-            upperindex = np.zeros(lf)
-            lowerindex = np.zeros(lf)
-            maximumabsoluteprobabilityconcentration = 0.999  #Approximation 2b
-            for ii in range(lf):
-                exprow = np.exp(currTrans[:,ii]) ###deleted exp
-                exprowsum = np.sum(exprow) * maximumabsoluteprobabilityconcentration
-                lowerbound = np.argmax(exprow)
-                upperbound = lowerbound + 1
-                totalsumm = exprow[lowerbound]
-                while (totalsumm < exprowsum):
-                    if lowerbound == 0:
-                        totalsumm = totalsumm + exprow[upperbound]
-                        upperbound = upperbound + 1
-                    elif upperbound == lf:
-                        lowerbound = lowerbound - 1
-                        totalsumm = totalsumm + exprow[lowerbound]
-                    elif exprow[lowerbound - 1] >= exprow[upperbound]:
-                        lowerbound = lowerbound - 1
-                        totalsumm = totalsumm + exprow[lowerbound]
-                    else:
-                        totalsumm = totalsumm + exprow[upperbound]
-                        upperbound = upperbound + 1
-                upperindex[ii] = upperbound
-                lowerindex[ii] = lowerbound
-            
-                 
-        #grab ancient GL rows
-        ancientGLrows = ancientGLs[ancientGLs[:,0] > cumGens]
-        ancientGLrows = ancientGLrows[ancientGLrows[:,0] <= cumGens + 1.0]
-
-        ancientHapGLrowsDerived = derSampledTimes[derSampledTimes > cumGens]
-        ancientHapGLrowsDerived = ancientHapGLrowsDerived[ancientHapGLrowsDerived <= cumGens + 1.0]
-        ancientHapGLrowsAncestral = ancSampledTimes[ancSampledTimes > cumGens]
-        ancientHapGLrowsAncestral = ancientHapGLrowsAncestral[ancientHapGLrowsAncestral <= cumGens + 1.0]
-
-        glEmissions = np.zeros(lf)
-        for j in range(lf):
-            for iac in range(ancientGLrows.shape[0]):
-                glEmissions[j] += _genotype_likelihood_emission(ancientGLrows[iac,1:],logfreqs[j],log1minusfreqs[j])
-            for iac in range(len(ancientHapGLrowsDerived)):
-                glEmissions[j] += np.log(freqs[j])
-            for iac in range(len(ancientHapGLrowsAncestral)):
-                glEmissions[j] += np.log(1 - freqs[j])
         
         #grab coal times during epoch
         # calculate coal emission probs
@@ -409,33 +187,10 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
             nDerRemaining += numberofsampledder
             nAncRemaining += numberofsampledanc
 
-        #if precomputematrixboolean == 1: # should only do this in importance sampling case.
-        upperbounddd = round(min(lf, currentmaxindex + lf/19.0))  #Approximation 3. Set this to lf and next line to 0 to turn off the beam search.
-        lowerbounddd = round(max(0, currentminindex - lf/19.0))
-        #print(tb, lowerbounddd, upperbounddd, currentminindex, currentmaxindex)
-        if nDerRemaining == 1:
-            lowerbounddd = min(lowerbounddd, 0)
-
-        ####################################
-        alpahmax = -1e20 
-        for i in range(lowerbounddd,upperbounddd):
-            alpha[i] = _logsumexp(prevAlpha[lowerindex[i]:upperindex[i]] + currTrans[lowerindex[i]:upperindex[i],i]) + glEmissions[i] + coalEmissions[i]
-            if alpha[i] > alpahmax:
-                alpahmax = alpha[i]
+        for i in range(0,lf):
+            alpha[i] = _logsumexp(prevAlpha[0:lf] + currTrans[0:lf,i]) + coalEmissions[i]
             if np.isnan(alpha[i]):
                 alpha[i] = -np.inf
-        boundss = alpahmax - 200.0
-        #print(boundss)
-        for i in range(0,lf):
-            if alpha[i] > boundss:
-                currentminindex = i
-                break
-        #print(np.max(alpha) , _logsumexp(alpha))
-        #print(alpha )
-        for i in range(lf,0,-1):
-            if alpha[i] > boundss:
-                currentmaxindex = i
-                break
 
         prevNt = Nt
         prevst = st
