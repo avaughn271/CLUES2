@@ -271,9 +271,9 @@ if __name__ == "__main__":
 				res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.9,1.0,1.1],args=minargs, method = "Brent", tol = 1e-4))
 				S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
 				L = res.fun
-				if times.shape[1] < 25: # with small number of samples, result function can be multimodal, so do multiple optims and take best.
+				if times.shape[1] < 31: # with small number of samples, result function can be multimodal, so do multiple optims and take best.
 					try:
-						res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [1.0001,1.005,1.02],args=minargs, method = "Brent", tol = 1e-4))
+						res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [1.0001,1.00011,1.02],args=minargs, method = "Brent", tol = 1e-4))
 						Stemp = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
 						Ltemp = res.fun
 						if Ltemp < L:
@@ -315,9 +315,9 @@ if __name__ == "__main__":
 				res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.9,1.0,1.1],args=minargs, method = "Brent", tol = 1e-4))
 				S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
 				L = res.fun
-				if times.shape[1] < 25: # with small number of samples, result function can be multimodal, so do multiple optims and take best.
+				if times.shape[1] < 31: # with small number of samples, result function can be multimodal, so do multiple optims and take best.
 					try:
-						res = (minimize_scalar(likelihood_wrapper_scalar,  bracket = [1.0001,1.005,1.02] ,args=minargs, method = "Brent", tol = 1e-4))
+						res = (minimize_scalar(likelihood_wrapper_scalar,  bracket = [1.0001,1.00011,1.02] ,args=minargs, method = "Brent", tol = 1e-4))
 						Stemp = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
 						Ltemp = res.fun
 						if Ltemp < L:
