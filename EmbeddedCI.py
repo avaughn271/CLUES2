@@ -25,7 +25,7 @@ logpost = np.loadtxt(args.post, delimiter=",", dtype=float)
 epochs = np.linspace(0,logpost.shape[1],logpost.shape[1] + 1)
 f,ax = plt.subplots(1,1)
 f.set_size_inches(20,10)
-EXPPOST = np.exp(logpost) # rows are frequency, columns are time interbals
+EXPPOST = logpost # rows are frequency, columns are time interbals
 
 MATRIXTOPLOT = np.zeros((EXPPOST.shape[0],EXPPOST.shape[1]))
 
