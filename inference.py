@@ -227,42 +227,9 @@ def traj_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,
 		post -= logsumexp(post,axis=0)
 	return post
 
-def likelihoodold(theta, args):
-	Xvals = args[0]
-	Yvals = args[1]
-	scalarr = theta[0]
-	numdimensions = round((np.sqrt( (len(theta) - 1) * 8 + 1)  - 1)/2.0)
-	print(numdimensions)
-	if numdimensions == 1: #1d optimization
-		standarddev = theta[1]
-		if standarddev <=0:
-			return(10000000000.0)
-		FUNC = 0
-		for i in range(len(Xvals)):
-			FUNC = FUNC + (Yvals[i] - scalarr * norm.pdf(Xvals[i], loc = args[2][0], scale = standarddev))**2
-		return(FUNC)
-	else:
-		diagonalelements = theta[1:(numdimensions + 1)]
-		for i in diagonalelements:
-			if i < 0.0:
-				return(10000000000.0)
-		cholfactor = np.zeros((numdimensions, numdimensions))
-		elementindex = 1
-
-		for difference in range(numdimensions):
-			for col in range(numdimensions - difference):
-				cholfactor[col + difference, col] = theta[elementindex]
-				elementindex = elementindex + 1
-		covarmatrix = np.matmul(cholfactor, np.transpose(cholfactor))
-		FUNC = 0
-		for i in range(len(Xvals)):
-			FUNC = FUNC + (Yvals[i] - scalarr * multivariate_normal.pdf(Xvals[i], mean = args[2], cov = covarmatrix))**2
-		return(FUNC)
-
 def likelihood(theta, args):
 	Xvals = args[0]
 	Yvals = args[1]
-	#scalarr =  ##temppp
 	numdimensions = round((np.sqrt( len(theta) * 8 + 1)  - 1)/2.0)
 	if numdimensions == 1: #1d optimization
 		scalarr  = 1/norm.pdf( args[2][0],  args[2][0], standarddev)
@@ -480,15 +447,10 @@ if __name__ == "__main__":
 				if iggi > 0.2 or iggi < -0.2:
 					print("Poor fit of normal distribution to data. Unreliable results follow.")
 
-			#S0 =[0.0] * (round((len(Xvals[0])*len(Xvals[0])+len(Xvals[0]))/2)  )
-			#for innn in range(len(Xvals[0])  ):
-			#	S0[innn] = 10**(-5.0)
-			#res = minimize(likelihood, S0, args=[Xvals, Yvals, muu], method='Nelder-Mead', options={"maxfev":1000, "fatol":1e-20, "xatol":1e-20}).x
 			print("mu2: ", muu)
 			print("sd2: ", res)
 			standard_dev = res
 			numdimensions=  len(muu)
-
 
 			covarmat = np.zeros((numdimensions, numdimensions))
 			elementindex = 0
@@ -502,8 +464,6 @@ if __name__ == "__main__":
 					covarmat[row, col] = max(covarmat[row, col] , covarmat[col, row] )
 			variatess = multivariate_normal.rvs(mean=muu, cov=covarmat, size=30)
 			print(S)
-			#print(variatess[0])
-
 
 		# infer trajectory @ MLE of selection parameter
 		post = np.exp(traj_wrapper(variatess[0],timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
