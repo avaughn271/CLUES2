@@ -7,7 +7,7 @@ import os
 from scipy.stats import chi2
 from scipy.stats import norm
 from numpy.random import normal
-
+from scipy.stats import multivariate_normal
 
 def parse_args():
 	"""Define the Arguments"""
@@ -172,8 +172,10 @@ def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_l
 	else:
 		betaMat = backward_algorithm(sel,t,derSampledTimes,ancSampledTimes,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,np.zeros((len(freqs),len(freqs))),noCoals=noCoals,precomputematrixboolean=0,currFreq=currFreq)
 		logl = -logsumexp(betaMat[-2,:])
-	print(theta, logl)
-	functionvals.write(str(theta[0]) + "," + str(-logl) + "\n")
+	strr = ""
+	for i in range(len(theta)):
+		strr = strr + str(theta[i]) + ","
+	functionvals.write(strr + str(-logl) + "\n")
 	return logl
 
 def likelihood_wrapper_scalar(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals,Weights = []):
@@ -225,17 +227,71 @@ def traj_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,
 		post -= logsumexp(post,axis=0)
 	return post
 
-def likelihood(theta, args):
+def likelihoodold(theta, args):
 	Xvals = args[0]
 	Yvals = args[1]
 	scalarr = theta[0]
-	standarddev = theta[1]
-	if standarddev <=0:
-		return(10000000000.0)
-	FUNC = 0
-	for i in range(len(Xvals)):
-		FUNC = FUNC + (Yvals[i] - scalarr * norm.pdf(Xvals[i], loc = args[2], scale = standarddev))**2
-	return(FUNC)
+	numdimensions = round((np.sqrt( (len(theta) - 1) * 8 + 1)  - 1)/2.0)
+	print(numdimensions)
+	if numdimensions == 1: #1d optimization
+		standarddev = theta[1]
+		if standarddev <=0:
+			return(10000000000.0)
+		FUNC = 0
+		for i in range(len(Xvals)):
+			FUNC = FUNC + (Yvals[i] - scalarr * norm.pdf(Xvals[i], loc = args[2][0], scale = standarddev))**2
+		return(FUNC)
+	else:
+		diagonalelements = theta[1:(numdimensions + 1)]
+		for i in diagonalelements:
+			if i < 0.0:
+				return(10000000000.0)
+		cholfactor = np.zeros((numdimensions, numdimensions))
+		elementindex = 1
+
+		for difference in range(numdimensions):
+			for col in range(numdimensions - difference):
+				cholfactor[col + difference, col] = theta[elementindex]
+				elementindex = elementindex + 1
+		covarmatrix = np.matmul(cholfactor, np.transpose(cholfactor))
+		FUNC = 0
+		for i in range(len(Xvals)):
+			FUNC = FUNC + (Yvals[i] - scalarr * multivariate_normal.pdf(Xvals[i], mean = args[2], cov = covarmatrix))**2
+		return(FUNC)
+
+def likelihood(theta, args):
+	Xvals = args[0]
+	Yvals = args[1]
+	#scalarr =  ##temppp
+	numdimensions = round((np.sqrt( len(theta) * 8 + 1)  - 1)/2.0)
+	if numdimensions == 1: #1d optimization
+		scalarr  = 1/norm.pdf( args[2][0],  args[2][0], standarddev)
+		standarddev = theta[1]
+		if standarddev <=0:
+			return(10000000000.0)
+		FUNC = 0
+		for i in range(len(Xvals)):
+			FUNC = FUNC + (Yvals[i] - scalarr * norm.pdf(Xvals[i], loc = args[2][0], scale = standarddev))**2
+		return(FUNC)
+	else:		
+		cholfactor = np.zeros((numdimensions, numdimensions))
+		elementindex = 0
+
+		for difference in range(numdimensions):
+			for col in range(numdimensions - difference):
+				cholfactor[col + difference, col] = theta[elementindex]
+				elementindex = elementindex + 1
+		for row in range(numdimensions):
+			for col in range(numdimensions):
+				cholfactor[row, col] = max(cholfactor[row, col] , cholfactor[col, row] )
+		if not np.all(np.linalg.eigvals(cholfactor) > 0):
+			return(10000000000.0)
+		scalarr  = 1/multivariate_normal.pdf(args[2], mean = args[2], cov = cholfactor)
+
+		FUNC = 0
+		for i in range(len(Xvals)):
+			FUNC = FUNC + (Yvals[i] - scalarr * multivariate_normal.pdf(Xvals[i], mean = args[2], cov = cholfactor))**2
+		return(FUNC)
 
 if __name__ == "__main__":
 	args = parse_args()
@@ -381,26 +437,79 @@ if __name__ == "__main__":
 		Lines = file1.readlines()
 		Xvals = []
 		Yvals = []
+		indexxx = 0
 		for i in Lines:
+			Xvals.append([])
 			DerivedSampleTimes = i.split(",")
-			Xvals.append(float(DerivedSampleTimes[0]))
-			Yvals.append(float(DerivedSampleTimes[1]))
+			for j in range(len(DerivedSampleTimes) - 1 ):
+				(Xvals[indexxx]).append(float(DerivedSampleTimes[j]))
+			Yvals.append(float(DerivedSampleTimes[len(DerivedSampleTimes) - 1 ]))
+			indexxx = indexxx + 1
 		Yvals = np.exp(np.subtract(Yvals, max(Yvals)))
 		muu = Xvals[(list(Yvals)).index(max(Yvals))]
+		#print(Xvals, Yvals, muu)
 
-		S0 =[1.0,1.0]
-		res = minimize(likelihood, S0, args=[Xvals, Yvals,muu], method='Nelder-Mead', options={"maxfev":1000, "fatol":1e-20, "xatol":1e-20}).x
-		print("mu: ", muu)
-		print("sd: ", res[1])
-		standard_dev = res[1]
-		variatess = normal(loc=muu, scale=standard_dev, size=1500)
-		print(S)
+		if len(Xvals[0]) == 1:
+			S0 =[1.0]
+			res = minimize(likelihood, S0, args=[Xvals, Yvals, muu], method='Nelder-Mead', options={"maxfev":1000, "fatol":1e-20, "xatol":1e-20}).x
+			print("mu1: ", muu)
+			print("sd1: ", res[1])
+			standard_dev = res[1]
+			variatessold = normal(loc=muu, scale=standard_dev, size=30)
+			print(S)
+			variatess = []
+			for iiiv in variatessold:
+				variatess.append([iiiv])
+		else:
+			S0 =[0.0] * (round((len(Xvals[0])*len(Xvals[0])+len(Xvals[0]))/2)  )
+			for innn in range(len(Xvals[0]) ):
+				S0[innn] = 1.0
+			res = minimize(likelihood, S0, args=[Xvals, Yvals, muu], method='Nelder-Mead', options={"maxfev":1000, "fatol":1e-40, "xatol":1e-40})
+
+			for ifi in range(1,9):
+				S0 =[0.0] * (round((len(Xvals[0])*len(Xvals[0])+len(Xvals[0]))/2)  )
+				for innn in range(len(Xvals[0])  ):
+					S0[innn] = 10**(-ifi)
+				res1 = minimize(likelihood, S0, args=[Xvals, Yvals, muu], method='Nelder-Mead', options={"maxfev":1000, "fatol":1e-40, "xatol":1e-40})
+
+				if res1.fun < res.fun:
+					res = res1
+			print("least-squares residual:", res.fun)
+			res = res.x
+			for iggi in res:
+				if iggi > 0.2 or iggi < -0.2:
+					print("Poor fit of normal distribution to data. Unreliable results follow.")
+
+			#S0 =[0.0] * (round((len(Xvals[0])*len(Xvals[0])+len(Xvals[0]))/2)  )
+			#for innn in range(len(Xvals[0])  ):
+			#	S0[innn] = 10**(-5.0)
+			#res = minimize(likelihood, S0, args=[Xvals, Yvals, muu], method='Nelder-Mead', options={"maxfev":1000, "fatol":1e-20, "xatol":1e-20}).x
+			print("mu2: ", muu)
+			print("sd2: ", res)
+			standard_dev = res
+			numdimensions=  len(muu)
+
+
+			covarmat = np.zeros((numdimensions, numdimensions))
+			elementindex = 0
+
+			for difference in range(numdimensions):
+				for col in range(numdimensions - difference):
+					covarmat[col + difference, col] = res[elementindex]
+					elementindex = elementindex + 1
+			for row in range(numdimensions):
+				for col in range(numdimensions):
+					covarmat[row, col] = max(covarmat[row, col] , covarmat[col, row] )
+			variatess = multivariate_normal.rvs(mean=muu, cov=covarmat, size=30)
+			print(S)
+			#print(variatess[0])
+
 
 		# infer trajectory @ MLE of selection parameter
-		post = np.exp(traj_wrapper([variatess[0]],timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
+		post = np.exp(traj_wrapper(variatess[0],timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
 		for v in range(1,len(variatess)):
 			print(variatess[v])
-			post = post + np.exp(traj_wrapper([variatess[v]],timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
+			post = post + np.exp(traj_wrapper(variatess[v],timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
 		post = post / np.sum(post,axis=0)
 		np.savetxt(args.out+"_freqs.txt", freqs, delimiter=",")
 		np.savetxt(args.out+"_post.txt", post, delimiter=",")
