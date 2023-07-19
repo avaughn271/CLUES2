@@ -5,6 +5,9 @@ from scipy.optimize import minimize, minimize_scalar
 import argparse
 import os
 from scipy.stats import chi2
+from scipy.stats import norm
+from numpy.random import normal
+
 
 def parse_args():
 	"""Define the Arguments"""
@@ -138,7 +141,7 @@ def load_data(args):
 		timeBins = np.array([0.0,tCutoff])
 	return timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq,logfreqs,log1minusfreqs,derSampledTimes,ancSampledTimes
 
-def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes, Weights = []):
+def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals,Weights = []):
 	S = theta
 	Sprime = np.concatenate((S,[0.0]))
 	if np.any(np.abs(Sprime) > sMax):
@@ -169,10 +172,12 @@ def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_l
 	else:
 		betaMat = backward_algorithm(sel,t,derSampledTimes,ancSampledTimes,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,np.zeros((len(freqs),len(freqs))),noCoals=noCoals,precomputematrixboolean=0,currFreq=currFreq)
 		logl = -logsumexp(betaMat[-2,:])
+	print(theta, logl)
+	functionvals.write(str(theta[0]) + "," + str(-logl) + "\n")
 	return logl
 
-def likelihood_wrapper_scalar(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights = []):
-	return(likelihood_wrapper([theta - 1.0],timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
+def likelihood_wrapper_scalar(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals,Weights = []):
+	return(likelihood_wrapper([theta - 1.0],timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals,Weights))
 #added +1 and -1 in order to get better convergence properties.
 
 def traj_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights = []):
@@ -220,12 +225,28 @@ def traj_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,
 		post -= logsumexp(post,axis=0)
 	return post
 
+def likelihood(theta, args):
+	Xvals = args[0]
+	Yvals = args[1]
+	scalarr = theta[0]
+	standarddev = theta[1]
+	if standarddev <=0:
+		return(10000000000.0)
+	FUNC = 0
+	for i in range(len(Xvals)):
+		FUNC = FUNC + (Yvals[i] - scalarr * norm.pdf(Xvals[i], loc = args[2], scale = standarddev))**2
+	return(FUNC)
+
 if __name__ == "__main__":
 	args = parse_args()
 	if args.times == None and args.ancientSamps == None:
 		print('You need to supply coalescence times (--times) and/or ancient samples (--ancientSamps)')
 	
 	# load data and set up model
+	#should delete the previous verion
+	if os.path.exists("myfile.txt"):
+		os.remove("myfile.txt")
+	functionvals = open("myfile.txt", "a")
 	sMax = args.sMax
 	timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq,logfreqs,log1minusfreqs,derSampledTimes,ancSampledTimes = load_data(args)
 	# read in global Phi(z) lookups
@@ -262,9 +283,9 @@ if __name__ == "__main__":
 		ImpSamp = True
 	if not ImpSamp: # to account for whether we return the likelihood or the log likelihood
 
-		logL0 = likelihood_wrapper(S0,timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes)
+		logL0 = likelihood_wrapper(S0,timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals)
 
-		minargs = (timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes)
+		minargs = (timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals)
 
 		if len(S0) == 1:
 			try:
@@ -353,9 +374,35 @@ if __name__ == "__main__":
 	f = open(args.out+"_inference.txt", "w+")
 	f.writelines(FirstLine  + "\n" + toprint + "\n")
 	f.close()
+	functionvals.close()
 
 	if not args.noAlleleTraj:
+		file1 = open("myfile.txt", 'r')
+		Lines = file1.readlines()
+		Xvals = []
+		Yvals = []
+		for i in Lines:
+			DerivedSampleTimes = i.split(",")
+			Xvals.append(float(DerivedSampleTimes[0]))
+			Yvals.append(float(DerivedSampleTimes[1]))
+		Yvals = np.exp(np.subtract(Yvals, max(Yvals)))
+		muu = Xvals[(list(Yvals)).index(max(Yvals))]
+
+		S0 =[1.0,1.0]
+		res = minimize(likelihood, S0, args=[Xvals, Yvals,muu], method='Nelder-Mead', options={"maxfev":1000, "fatol":1e-20, "xatol":1e-20}).x
+		print("mu: ", muu)
+		print("sd: ", res[1])
+		standard_dev = res[1]
+		variatess = normal(loc=muu, scale=standard_dev, size=1500)
+		print(S)
+
 		# infer trajectory @ MLE of selection parameter
-		post = traj_wrapper(S,timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights)
+		post = np.exp(traj_wrapper([variatess[0]],timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
+		for v in range(1,len(variatess)):
+			print(variatess[v])
+			post = post + np.exp(traj_wrapper([variatess[v]],timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
+		post = post / np.sum(post,axis=0)
 		np.savetxt(args.out+"_freqs.txt", freqs, delimiter=",")
 		np.savetxt(args.out+"_post.txt", post, delimiter=",")
+	if os.path.exists("myfile.txt"):
+		os.remove("myfile.txt")
