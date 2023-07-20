@@ -422,7 +422,7 @@ if __name__ == "__main__":
 			print("mu1: ", muu)
 			print("sd1: ", res[0])
 			standard_dev = res[0]
-			variatessold = normal(loc=muu, scale=standard_dev, size=30)
+			variatessold = normal(loc=muu, scale=standard_dev, size=10)
 			print(S)
 			variatess = []
 			for iiiv in variatessold:
@@ -462,7 +462,7 @@ if __name__ == "__main__":
 			for row in range(numdimensions):
 				for col in range(numdimensions):
 					covarmat[row, col] = max(covarmat[row, col] , covarmat[col, row] )
-			variatess = multivariate_normal.rvs(mean=muu, cov=covarmat, size=30)
+			variatess = multivariate_normal.rvs(mean=muu, cov=covarmat, size = numdimensions * 10)
 			print(S)
 
 		# infer trajectory @ MLE of selection parameter
