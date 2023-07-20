@@ -232,7 +232,7 @@ def likelihood(theta, args):
 	Yvals = args[1]
 	numdimensions = round((np.sqrt( len(theta) * 8 + 1)  - 1)/2.0)
 	if numdimensions == 1: #1d optimization
-		standarddev = theta[1]
+		standarddev = theta[0]
 		scalarr  = 1/norm.pdf( args[2][0],  args[2][0], standarddev)
 		if standarddev <=0:
 			return(10000000000.0)
@@ -420,8 +420,8 @@ if __name__ == "__main__":
 			S0 =[1.0]
 			res = minimize(likelihood, S0, args=[Xvals, Yvals, muu], method='Nelder-Mead', options={"maxfev":1000, "fatol":1e-20, "xatol":1e-20}).x
 			print("mu1: ", muu)
-			print("sd1: ", res[1])
-			standard_dev = res[1]
+			print("sd1: ", res[0])
+			standard_dev = res[0]
 			variatessold = normal(loc=muu, scale=standard_dev, size=30)
 			print(S)
 			variatess = []
