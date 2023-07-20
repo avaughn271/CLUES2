@@ -250,7 +250,8 @@ def likelihood(theta, args):
 				elementindex = elementindex + 1
 		for row in range(numdimensions):
 			for col in range(numdimensions):
-				cholfactor[row, col] = max(cholfactor[row, col] , cholfactor[col, row] )
+				if cholfactor[row, col] == 0.0:
+					cholfactor[row, col] = cholfactor[col, row]
 		if not np.all(np.linalg.eigvals(cholfactor) > 0):
 			return(10000000000.0)
 		scalarr  = 1/multivariate_normal.pdf(args[2], mean = args[2], cov = cholfactor)
@@ -461,7 +462,8 @@ if __name__ == "__main__":
 					elementindex = elementindex + 1
 			for row in range(numdimensions):
 				for col in range(numdimensions):
-					covarmat[row, col] = max(covarmat[row, col] , covarmat[col, row] )
+					if covarmat[row, col] == 0.0:
+						covarmat[row, col] = covarmat[col, row]
 			variatess = multivariate_normal.rvs(mean=muu, cov=covarmat, size = numdimensions * 10)
 			print(S)
 
