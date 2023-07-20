@@ -232,8 +232,8 @@ def likelihood(theta, args):
 	Yvals = args[1]
 	numdimensions = round((np.sqrt( len(theta) * 8 + 1)  - 1)/2.0)
 	if numdimensions == 1: #1d optimization
-		scalarr  = 1/norm.pdf( args[2][0],  args[2][0], standarddev)
 		standarddev = theta[1]
+		scalarr  = 1/norm.pdf( args[2][0],  args[2][0], standarddev)
 		if standarddev <=0:
 			return(10000000000.0)
 		FUNC = 0
