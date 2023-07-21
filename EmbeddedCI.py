@@ -9,7 +9,7 @@ parser = argparse.ArgumentParser()
 parser.add_argument('--freqs',type=str)
 parser.add_argument('--post',type=str)
 parser.add_argument('--figure',type=str)
-parser.add_argument('--posterior_intervals', default=[0.25, 0.5, 0.75, 0.95, 0.999], type=float, nargs='+',
+parser.add_argument('--posterior_intervals', default=[0.5, 0.75, 0.95, 0.999], type=float, nargs='+',
                     help='The posterior thresholds for which to draw different consensus trees.')
 parser.add_argument('--generation_time', default=-1.0, type=float, help='Conversion to generation time.')
 args = parser.parse_args()
