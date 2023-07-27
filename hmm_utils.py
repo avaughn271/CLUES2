@@ -224,17 +224,15 @@ def forward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,l
 
             numberofsampledder = derSampledTimes
             numberofsampledder = numberofsampledder[numberofsampledder > cumGens - 1.0]
-            numberofsampledder = len(numberofsampledder[numberofsampledder <= cumGens])
 
             numberofsampledanc = ancSampledTimes
             numberofsampledanc = numberofsampledanc[numberofsampledanc > cumGens - 1.0]
-            numberofsampledanc = len(numberofsampledanc[numberofsampledanc <= cumGens])
 
             nDerRemaining += len(derCoals)
             nAncRemaining += len(ancCoals)
 
-            nDerRemaining -= numberofsampledder
-            nAncRemaining -= numberofsampledanc
+            nDerRemaining -= len(numberofsampledder[numberofsampledder <= cumGens])
+            nAncRemaining -= len(numberofsampledanc[numberofsampledanc <= cumGens])
 
             for j in range(lf):
                     if nDerRemaining > 1: # if multiple derived lineages, all is good
@@ -396,18 +394,15 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
             
             numberofsampledder = derSampledTimes
             numberofsampledder = numberofsampledder[numberofsampledder > cumGens]
-            numberofsampledder = len(numberofsampledder[numberofsampledder <= cumGens + 1.0])
 
             numberofsampledanc = ancSampledTimes
             numberofsampledanc = numberofsampledanc[numberofsampledanc > cumGens]
-            numberofsampledanc = len(numberofsampledanc[numberofsampledanc <= cumGens + 1.0])
 
-            #print(cumGens,numberofsampledder,numberofsampledanc)
             nDerRemaining -= len(derCoals)
             nAncRemaining -= len(ancCoals)
 
-            nDerRemaining += numberofsampledder
-            nAncRemaining += numberofsampledanc
+            nDerRemaining += len(numberofsampledder[numberofsampledder <= cumGens + 1.0])
+            nAncRemaining += len(numberofsampledanc[numberofsampledanc <= cumGens + 1.0])
 
         #if precomputematrixboolean == 1: # should only do this in importance sampling case.
         upperbounddd = round(min(lf, currentmaxindex + lf/19.0))  #Approximation 3. Set this to lf and next line to 0 to turn off the beam search.
