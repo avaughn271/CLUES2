@@ -74,14 +74,14 @@ You read this file into CLUES2 with the --times argument, as when using only mod
 Samples: These input files look like the following file. The first column is the sampling times of the ancient samples (given in generations). The second column is the log genotypes probability of 0/0. The third column is the log genotype probability of 0/1 (which is to say 1|0 or 0|1). The fourth column is the log genotype probability of (1/1). For example, the first row of the following file means that an individual was sampled 16.48 generations ago and we are 100% certain has a 0/0 genotype. The second row of the following file means that an individual was sampled 170.68 generations ago to which we assign a probability of 0.105 of being 0/0, a probability 0.878 of being 0/1, and a probability of 0.017 of being 1/1. Uncertainty in genotype calls of ancient data can be caused by imputation. The data should be sorted in increasing order by sampling time.
 
 ```bash
-1.648171304943918258e+01 0.000000000000000000e+00 -inf -inf
-170.678571428571 -2.25379492882461 -0.13010868534702 -4.07454193492592
-190.035714285714 -0.787457860031187 -0.632993257740198 -4.3428059215206
-2.135572624386489338e+02 -inf -inf 0.000000000000000000e+00
+16.45 0.0e+00 -inf -inf
+170.6 -2.25379492882461 -0.13010868534702 -4.07454193492592
+190.05 -0.787457860031187 -0.632993257740198 -4.3428059215206
+213 -inf -inf 0.0
 ...
-4.967392959190617603e+02 0.000000000000000000e+00 -inf -inf
-4.983198490270729053e+02 0.000000000000000000e+00 -inf -inf
-500.0 0.000000000000000000e+00 -inf -inf
+496.7 0.0 -inf -inf
+498.31 0.0 -inf -inf
+500.0 0.0 -inf -inf
 ```
 
 ## Running CLUES
