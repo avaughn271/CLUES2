@@ -5,7 +5,7 @@ CLUES2 is a program to infer selection coefficients, evaluate the statistical ev
 
 ## Installation
 
-CLUES can be downloaded from this GitHub repo by running the following command:
+CLUES2 can be downloaded from this GitHub repo by running the following command:
 ```bash
 $ git clone https://github.com/avaughn271/CLUES2
 ```
