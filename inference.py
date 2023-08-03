@@ -18,11 +18,11 @@ def parse_args():
 	parser.add_argument('--ancientSamps',type=str,default=None)
 	parser.add_argument('--out',type=str,default=None)
 
-	parser.add_argument('-N','--N',type=float,default=10**4)
-	parser.add_argument('-coal','--coal',type=str,default=None,help='path to Relate .coal file. Negates --N option.')
+	parser.add_argument('--N',type=float,default=10**4)
+	parser.add_argument('--coal',type=str,default=None,help='path to Relate .coal file. Negates --N option.')
 
 	parser.add_argument('--tCutoff',type=float,default=1000)
-	parser.add_argument('--timeBins',type=str,default=None)
+	parser.add_argument('--timeBins',type=str,default=None, nargs='+')
 	parser.add_argument('--sMax',type=float,default=0.1)
 	parser.add_argument('--df',type=int,default=450)
 	parser.add_argument('--noAlleleTraj', default=False, action='store_true', help='whether to compute the posterior allele frequency trajectory or not.')
@@ -136,7 +136,10 @@ def load_data(args):
 
 	# load time bins (for defining selection epochs)
 	if args.timeBins != None:
-		timeBins = np.genfromtxt(args.timeBins)
+		breakppoint = []
+		for i in range(len(args.timeBins)):
+			breakppoint.append(float(round(float(args.timeBins[i]))))
+		timeBins = np.array([0.0] + breakppoint + [tCutoff + 20.0])
 	else:
 		timeBins = np.array([0.0,tCutoff])
 	return timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq,logfreqs,log1minusfreqs,derSampledTimes,ancSampledTimes
