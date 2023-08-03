@@ -193,7 +193,7 @@ $ python PATH/plot_traj.py
 
 **--figure** The desired figure prefix.
 
-**--posterior_intervals** A list of the posterior intervals to plot. Must all be numbers between 0.0 and 1.0, exclusive.  Default value is [0.25, 0.5, 0.75, 0.95, 0.999].
+**--posterior_intervals** A list of the posterior intervals to plot. Must all be numbers between 0.0 and 1.0, exclusive.  Default value is [0.5, 0.75, 0.95, 0.999].
 
 **--generation_time** (optional) The number of years per generation.
 
