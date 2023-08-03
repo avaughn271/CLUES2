@@ -131,9 +131,9 @@ $ python PATH/inference.py
 
 ## This step takes as input:
 
-**--times** The input file of coalescent times as described above. You can supply a **--times** file, a **--ancientSamps** file, or both.
+**--times** The input file of coalescent times as described above. You can supply a **--times** file, a **--ancientSamps** file, or both. The times in this file, as with all times in CLUES2, should be measured in generations.
 
-**--ancientSamps** The input file of ancient genotype proabilities as described above. You can supply a **--times** file, or an **--ancientSamps** file, or both.
+**--ancientSamps** The input file of ancient genotype proabilities as described above. You can supply a **--times** file, or an **--ancientSamps** file, or both. The times in this file, as with all times in CLUES2, should be measured in generations.
 
 **--popFreq**  The modern derived allele frequency.
 
