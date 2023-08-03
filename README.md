@@ -145,15 +145,7 @@ $ python PATH/inference.py
 
 **--df** This is the number of discretization points that is used to bin the allele frequencies. A higher number will result in less error due to rounding of allele frequencies but at increased computational cost. We find that having a finer discretization (higher df) is more important when N is large. This is because large population sizes result in smaller allele frequency fluctuations from generation to generation and only a fine discretization grid will be able to model them accurately. The most rigorous way to set df is to steadily increase df until the results appear to have converged, but we find that practically the default value of 450 is sufficient for nearly all cases.
 
-**--timeBins** A file containing one nonnegative number per line, in increasing order. These give the endpoints of the disjoint time intervals in which independent selection coefficients will be inferred. An example file is:
-
-```bash
-0.0
-50.0
-100.0
-150.0
-```
-for which 3 separate selection coefficients will be inferred one each for the intervals [0,50), [50,100), and [100,150). If this file is not supplied, one selection coefficient will be inferred for the interval [0,tCutoff).
+**--timeBins** A list of epoch breakpoints, sorted in increasing order. These, along with 0 and tCutoff, give the endpoints of the disjoint time intervals in which independent selection coefficients will be inferred. For example, if --timeBins 200 300 is used, 3 separate selection coefficients will be inferred one each for the intervals [0,200), [200,300), and [300,tCutoff). If this argument is not supplied, one selection coefficient will be inferred for the interval [0,tCutoff). The youngest breakpoint must be greater than 0 and the oldest breakpoint must be less than tCutoff.
 
 **--out** The prefix of the output files.
 
