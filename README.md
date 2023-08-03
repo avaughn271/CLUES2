@@ -9,7 +9,7 @@ CLUES2 can be downloaded from this GitHub repo by running the following command:
 ```bash
 $ git clone https://github.com/avaughn271/CLUES2
 ```
-CLUES is written in Python and requires the following Python packages:
+CLUES2 is written in Python and requires the following Python packages:
 
 "numba, scipy, numpy, matplotlib, Bio, pandas"
 
