@@ -329,13 +329,11 @@ if __name__ == "__main__":
 							L = Ltemp
 					except ValueError:
 						pass
-				print(S,L)
 			except ValueError:
 				print("Selection MLE not found in [-0.1,0.1], possibly due to noninformative data. Expanding search to [-1,1].")
 				res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.00000001,1.0,2.0],args=minargs, method = "Brent", tol = 1e-4))
 				S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
 				L = res.fun
-				print(S,L)
 		else:
 			res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
 			S = res.x
@@ -373,13 +371,11 @@ if __name__ == "__main__":
 							L = Ltemp
 					except ValueError:
 						pass
-				print(S,L)
 			except ValueError:
 				print("Selection MLE not found in [-0.1,0.1], possibly due to noninformative data. Expanding search to [-1,1].")
 				res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.00000001,1.0,2.0],args=minargs, method = "Brent", tol = 1e-4))
 				S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
 				L = res.fun
-				print(S,L)
 		else:
 			res = minimize(likelihood_wrapper, S0, args=minargs, options=opts, method='Nelder-Mead')
 			S = res.x
@@ -418,16 +414,14 @@ if __name__ == "__main__":
 			indexxx = indexxx + 1
 		Yvals = np.exp(np.subtract(Yvals, max(Yvals)))
 		muu = Xvals[(list(Yvals)).index(max(Yvals))]
-		#print(Xvals, Yvals, muu)
 
 		if len(Xvals[0]) == 1:
 			S0 =[1.0]
 			res = minimize(likelihood, S0, args=[Xvals, Yvals, muu], method='Nelder-Mead', options={"maxfev":1000, "fatol":1e-20, "xatol":1e-20}).x
-			print("mu1: ", muu)
-			print("sd1: ", res[0])
+			#print("mu1: ", muu)
+			#print("sd1: ", res[0])
 			standard_dev = res[0]
 			variatessold = normal(loc=muu, scale=standard_dev, size=10)
-			print(S)
 			variatess = []
 			for iiiv in variatessold:
 				variatess.append([iiiv])
@@ -445,14 +439,14 @@ if __name__ == "__main__":
 
 				if res1.fun < res.fun:
 					res = res1
-			print("least-squares residual:", res.fun)
+			#print("least-squares residual:", res.fun)
 			res = res.x
 			for iggi in res:
 				if iggi > 0.2 or iggi < -0.2:
 					print("Poor fit of normal distribution to data. Unreliable results follow.")
 
-			print("mu2: ", muu)
-			print("sd2: ", res)
+			#print("mu2: ", muu)
+			#print("sd2: ", res)
 			standard_dev = res
 			numdimensions=  len(muu)
 
@@ -468,12 +462,10 @@ if __name__ == "__main__":
 					if covarmat[row, col] == 0.0:
 						covarmat[row, col] = covarmat[col, row]
 			variatess = multivariate_normal.rvs(mean=muu, cov=covarmat, size = numdimensions * 10)
-			print(S)
 
 		# infer trajectory @ MLE of selection parameter
 		post = np.exp(traj_wrapper(variatess[0],timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
 		for v in range(1,len(variatess)):
-			print(variatess[v])
 			post = post + np.exp(traj_wrapper(variatess[v],timeBins,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
 		post = post / np.sum(post,axis=0)
 		np.savetxt(args.out+"_freqs.txt", freqs, delimiter=",")

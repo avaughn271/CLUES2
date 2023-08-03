@@ -101,7 +101,6 @@ def _log_coal_density(times,n,epoch,xi,Ni,anc=0):
     if n == 1:
         # this flag indicates to ignore coalescence
         return 0.0
-    #print(times, n, epoch, xi,Ni, anc )  #set of times, n is number of lineages left of that lineage. epoch is [tb,tb+1]
     #xi is current frequency, #Ni is DIPLOID pop size (1/2 of the previous one.)
     logp = 0
     prevt = epoch[0]
@@ -407,7 +406,6 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
         #if precomputematrixboolean == 1: # should only do this in importance sampling case.
         upperbounddd = round(min(lf, currentmaxindex + lf/19.0))  #Approximation 3. Set this to lf and next line to 0 to turn off the beam search.
         lowerbounddd = round(max(0, currentminindex - lf/19.0))
-        #print(tb, lowerbounddd, upperbounddd, currentminindex, currentmaxindex)
         if nDerRemaining == 1:
             lowerbounddd = min(lowerbounddd, 0)
 
@@ -420,13 +418,10 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
             if np.isnan(alpha[i]):
                 alpha[i] = -np.inf
         boundss = alpahmax - 200.0
-        #print(boundss)
         for i in range(0,lf):
             if alpha[i] > boundss:
                 currentminindex = i
                 break
-        #print(np.max(alpha) , _logsumexp(alpha))
-        #print(alpha )
         for i in range(lf,0,-1):
             if alpha[i] > boundss:
                 currentmaxindex = i
