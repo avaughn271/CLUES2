@@ -271,9 +271,9 @@ if __name__ == "__main__":
 	
 	# load data and set up model
 	#should delete the previous verion
-	if os.path.exists("myfile.txt"):
-		os.remove("myfile.txt")
-	functionvals = open("myfile.txt", "a")
+	if os.path.exists(args.out+"_tempfile.txt"):
+		os.remove(args.out+"_tempfile.txt")
+	functionvals = open(args.out+"_tempfile.txt", "a")
 	sMax = args.sMax
 	timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq,logfreqs,log1minusfreqs,derSampledTimes,ancSampledTimes = load_data(args)
 	# read in global Phi(z) lookups
@@ -400,7 +400,7 @@ if __name__ == "__main__":
 	functionvals.close()
 
 	if not args.noAlleleTraj:
-		file1 = open("myfile.txt", 'r')
+		file1 = open(args.out+"_tempfile.txt", 'r')
 		Lines = file1.readlines()
 		Xvals = []
 		Yvals = []
@@ -470,5 +470,5 @@ if __name__ == "__main__":
 		post = post / np.sum(post,axis=0)
 		np.savetxt(args.out+"_freqs.txt", freqs, delimiter=",")
 		np.savetxt(args.out+"_post.txt", post, delimiter=",")
-	if os.path.exists("myfile.txt"):
-		os.remove("myfile.txt")
+	if os.path.exists(args.out+"_tempfile.txt"):
+		os.remove(args.out+"_tempfile.txt")
