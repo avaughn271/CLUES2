@@ -257,11 +257,18 @@ def likelihood(theta, args):
 					cholfactor[row, col] = cholfactor[col, row]
 		if not np.all(np.linalg.eigvals(cholfactor) > 0):
 			return(10000000000.0)
-		scalarr  = 1/multivariate_normal.pdf(args[2], mean = args[2], cov = cholfactor)
+		try:
+			scalarr  = 1/multivariate_normal.pdf(args[2], mean = args[2], cov = cholfactor)
+		except:
+			return(10000000000.0)
 
 		FUNC = 0
 		for i in range(len(Xvals)):
-			FUNC = FUNC + (Yvals[i] - scalarr * multivariate_normal.pdf(Xvals[i], mean = args[2], cov = cholfactor))**2
+			try:
+				FUNC = FUNC + (Yvals[i] - scalarr * multivariate_normal.pdf(Xvals[i], mean = args[2], cov = cholfactor))**2
+			except:
+				return(10000000000.0)
+				
 		return(FUNC)
 
 if __name__ == "__main__":
@@ -430,7 +437,6 @@ if __name__ == "__main__":
 			for innn in range(len(Xvals[0]) ):
 				S0[innn] = 1.0
 			res = minimize(likelihood, S0, args=[Xvals, Yvals, muu], method='Nelder-Mead', options={"maxfev":1000, "fatol":1e-40, "xatol":1e-40})
-
 			for ifi in range(1,9):
 				S0 =[0.0] * (round((len(Xvals[0])*len(Xvals[0])+len(Xvals[0]))/2)  )
 				for innn in range(len(Xvals[0])  ):
