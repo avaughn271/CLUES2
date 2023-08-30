@@ -81,4 +81,4 @@ for i in range(len(ConfidenceIntervals)):
 
 ax.legend(handles=handless, loc='upper right')
 
-plt.savefig('%s.%s'%(args.figure,'png'),format='png', dpi=800, bbox_inches='tight')
+plt.savefig('%s.%s'%(args.figure,'png'),format='png', dpi=300, bbox_inches='tight')
