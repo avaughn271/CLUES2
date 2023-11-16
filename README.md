@@ -114,12 +114,23 @@ The script will also flip the allelic states of the minimum number of leaf nodes
 
 
 
+CLUES2 can also process the output of SINGER. We provide a script "SingerToCLUES.py" to convert the outputof SINGER to the input for CLUES2.
 
+```bash
+$ python PATH/SingerToCLUES.py
+```
 
+## This step takes as input:
 
+**--position** The genomic position of the mutation you wish to analyze in the SINGER trees.
 
+**--tree_path** The file prefix of the sampled SINGER trees, including file paths. For example, if the user inputs "singeroutput" to this argument, then the script will look for files named "singeroutput-0.trees",  "singeroutput-1.trees", "singeroutput-2.trees", etc. in the current working directory. If the user inputs "singerfolder/singeroutput" to this argument, then the script will look for files named "singeroutput-0.trees",  "singeroutput-1.trees", "singeroutput-2.trees", etc. in the directory "singerfolder".
 
+**--output**  The prefix of the output file.
 
+## This step will produce (in the current working directory)
+
+***output*** **_times.txt** A file resembling the input file for derived and ancestral coalescent times described above.
 
 ## (2) Run Inference
 
