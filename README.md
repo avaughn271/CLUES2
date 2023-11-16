@@ -114,7 +114,7 @@ The script will also flip the allelic states of the minimum number of leaf nodes
 
 
 
-CLUES2 can also process the output of SINGER. We provide a script "SingerToCLUES.py" to convert the outputof SINGER to the input for CLUES2.
+CLUES2 can also process the output of SINGER. We provide a script "SingerToCLUES.py" to convert the output of SINGER to the input for CLUES2.
 
 ```bash
 $ python PATH/SingerToCLUES.py
