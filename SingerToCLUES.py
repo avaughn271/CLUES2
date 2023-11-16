@@ -11,8 +11,8 @@ parser.add_argument('--output',type=str,default=None)
 args =  parser.parse_args()
 TREEPATH = args.tree_path
 
-if os.path.exists(args.output + ".txt"):
-  os.remove(args.output + ".txt")
+if os.path.exists(args.output + "_times.txt"):
+  os.remove(args.output + "_times.txt")
 
 if "/" not in TREEPATH:
     FOLDERNAME = "."
@@ -101,6 +101,6 @@ for k in STRINGLIST:
         AncString = AncString + str(time)  + ","
     for time in DerivedTimes:
         DerString = DerString + str(time) + ","
-    f = open(args.output + ".txt", "a")
+    f = open(args.output + "_times.txt", "a")
     f.writelines(DerString[0:(len(DerString)-1)]+ "\n" + AncString[0:(len(AncString)-1)] + "\n") # added indexing to remove comma at the end
     f.close()
