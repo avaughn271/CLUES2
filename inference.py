@@ -30,7 +30,7 @@ def parse_args():
 	return parser.parse_args()
 
 def load_times(readtimes):
-	"""Load in the coalescent times
+	"""Load in the coalescent times 
     INPUT: readtimes - this is the file name of coalescence times
            times are given on an absolute scale.
 	   Line 1 is coalescence times of derived lineages including the mixed lineage!!!!
