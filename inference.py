@@ -16,6 +16,7 @@ def parse_args():
 	parser.add_argument('--popFreq',type=float,default=None)
 
 	parser.add_argument('--ancientSamps',type=str,default=None)
+	parser.add_argument('--ancientHaps',type=str,default=None)
 	parser.add_argument('--out',type=str,default=None)
 
 	parser.add_argument('--N',type=float,default=10**4)
@@ -115,7 +116,10 @@ def load_data(args):
 		ancientGLs = np.zeros((0,4))
 
 	# load ancient haploid genotype likelihoods
-	ancientHapGLs = np.zeros((0,3))
+	if args.ancientHaps != None:
+		ancientHapGLs = np.genfromtxt(args.ancientHaps,delimiter=' ')
+	else:
+		ancientHapGLs = np.zeros((0,3))
 
 	tCutoff = args.tCutoff
 
@@ -273,7 +277,7 @@ def likelihood(theta, args):
 
 if __name__ == "__main__":
 	args = parse_args()
-	if args.times == None and args.ancientSamps == None:
+	if args.times == None and args.ancientSamps == None and args.ancientHaps == None:
 		print('You need to supply coalescence times (--times) and/or ancient samples (--ancientSamps)')
 	
 	# load data and set up model

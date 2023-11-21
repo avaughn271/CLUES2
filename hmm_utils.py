@@ -86,6 +86,14 @@ def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf):
 	return(p1)
 
 @njit('float64(float64[:],float64,float64)')
+def _hap_genotype_likelihood_emission(ancGLs,logp, log1p):
+    logGenoFreqs = np.array([log1p,logp])
+    emission = _logsumexp(logGenoFreqs + ancGLs)
+    if np.isnan(emission):
+        emission = -np.inf
+    return emission
+
+@njit('float64(float64[:],float64,float64)')
 def _genotype_likelihood_emission(ancGLs,logp, log1p):
 	"""ancGLs is a list of size 3. p is the derived allele frequency.
 	Returns the probability of the given emission"""
@@ -202,6 +210,8 @@ def forward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,l
         for j in range(lf):
             for iac in range(ancientGLrows.shape[0]):
                 glEmissions[j] += _genotype_likelihood_emission(ancientGLrows[iac,1:],logfreqs[j],log1minusfreqs[j])
+            for iac in range(ancientHapGLrows.shape[0]):
+                glEmissions[j] += _hap_genotype_likelihood_emission(ancientHapGLrows[iac,1:],logfreqs[j],log1minusfreqs[j])
             for iac in range(len(ancientHapGLrowsDerived)):
                 glEmissions[j] += np.log(freqs[j])
             for iac in range(len(ancientHapGLrowsAncestral)):
@@ -294,7 +304,6 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
     
     prevNt = -1
     prevst = -1
-    
     cumGens = 0
     
     nDerRemaining = np.sum(times[0,:]>=0) - len(derSampledTimes)
@@ -302,6 +311,7 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
 
     coalEmissions = np.zeros(lf)
     for tb in range(0,T):
+
         Nt = N[tb]
         epoch = np.array([cumGens,cumGens+1.0])
         st = sel[tb]
@@ -340,16 +350,18 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
         #grab ancient GL rows
         ancientGLrows = ancientGLs[ancientGLs[:,0] > cumGens]
         ancientGLrows = ancientGLrows[ancientGLrows[:,0] <= cumGens + 1.0]
-
+        ancientHapGLrows = ancientHapGLs[ancientHapGLs[:,0] > cumGens]
+        ancientHapGLrows = ancientHapGLrows[ancientHapGLrows[:,0] <= cumGens + 1.0]
         ancientHapGLrowsDerived = derSampledTimes[derSampledTimes > cumGens]
         ancientHapGLrowsDerived = ancientHapGLrowsDerived[ancientHapGLrowsDerived <= cumGens + 1.0]
         ancientHapGLrowsAncestral = ancSampledTimes[ancSampledTimes > cumGens]
         ancientHapGLrowsAncestral = ancientHapGLrowsAncestral[ancientHapGLrowsAncestral <= cumGens + 1.0]
-
         glEmissions = np.zeros(lf)
         for j in range(lf):
             for iac in range(ancientGLrows.shape[0]):
                 glEmissions[j] += _genotype_likelihood_emission(ancientGLrows[iac,1:],logfreqs[j],log1minusfreqs[j])
+            for iac in range(ancientHapGLrows.shape[0]):
+                glEmissions[j] += _hap_genotype_likelihood_emission(ancientHapGLrows[iac,1:],logfreqs[j],log1minusfreqs[j])
             for iac in range(len(ancientHapGLrowsDerived)):
                 glEmissions[j] += np.log(freqs[j])
             for iac in range(len(ancientHapGLrowsAncestral)):
