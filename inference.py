@@ -144,7 +144,7 @@ def load_data(args):
 		timeBins = np.array([0.0,tCutoff])
 	return timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq,logfreqs,log1minusfreqs,derSampledTimes,ancSampledTimes
 
-def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals,Weights = []):
+def likelihood_wrapper(theta,timeBins,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals,Weights = []):
 	S = theta
 	Sprime = np.concatenate((S,[0.0]))
 	if np.any(np.abs(Sprime) > sMax):
