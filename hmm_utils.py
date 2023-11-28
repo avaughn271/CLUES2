@@ -88,11 +88,11 @@ def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf):
 @njit('float64(float64[:],float64,float64)')
 def _hap_genotype_likelihood_emission(ancGLs,logp, log1p):
 	"""Be aware that this does not exactly convert to a corresponding genotype emission due to specifying which haplotype is which. A factor of 2 is the difference."""
-    logGenoFreqs = np.array([log1p,logp])
-    emission = _logsumexp(logGenoFreqs + ancGLs)
-    if np.isnan(emission):
-        emission = -np.inf
-    return emission
+	logGenoFreqs = np.array([log1p,logp])
+	emission = _logsumexp(logGenoFreqs + ancGLs)
+	if np.isnan(emission):
+		emission = -np.inf
+	return emission
 
 @njit('float64(float64[:],float64,float64)')
 def _genotype_likelihood_emission(ancGLs,logp, log1p):
