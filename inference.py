@@ -27,6 +27,7 @@ def parse_args():
 	parser.add_argument('--sMax',type=float,default=0.1)
 	parser.add_argument('--df',type=int,default=450)
 	parser.add_argument('--noAlleleTraj', default=False, action='store_true', help='whether to compute the posterior allele frequency trajectory or not.')
+	parser.add_argument('--integration_points', type=int, default = -1)
 
 	return parser.parse_args()
 
@@ -192,7 +193,7 @@ def likelihood_wrapper_scalar(theta,timeBins,N,freqs,times,logfreqs,log1minusfre
 def traj_wrapper(theta,timeBins,N,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights = []):
 	S = theta
 	Sprime = np.concatenate((S,[0.0]))
-	
+
 	sel = Sprime[np.digitize(epochs,timeBins,right=False)-1]
 	T = len(epochs)
 	F = len(freqs)
@@ -429,7 +430,10 @@ if __name__ == "__main__":
 			#print("mu1: ", muu)
 			#print("sd1: ", res[0])
 			standard_dev = res[0]
-			variatessold = normal(loc=muu, scale=standard_dev, size=10)
+			if args.integration_points == -1:
+				variatessold = normal(loc=muu, scale=standard_dev, size=10)
+			else:
+				variatessold = normal(loc=muu, scale=standard_dev, size=args.integration_points)
 			variatess = []
 			for iiiv in variatessold:
 				variatess.append([iiiv])
@@ -468,7 +472,11 @@ if __name__ == "__main__":
 				for col in range(numdimensions):
 					if covarmat[row, col] == 0.0:
 						covarmat[row, col] = covarmat[col, row]
-			variatess = multivariate_normal.rvs(mean=muu, cov=covarmat, size = numdimensions * 10)
+			
+			if args.integration_points == -1:
+				variatess = multivariate_normal.rvs(mean=muu, cov=covarmat, size = numdimensions * 10)
+			else:
+				variatess = multivariate_normal.rvs(mean=muu, cov=covarmat, size = args.integration_points)
 
 		# infer trajectory @ MLE of selection parameter
 		post = np.exp(traj_wrapper(variatess[0],timeBins,Ne,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
