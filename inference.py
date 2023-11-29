@@ -192,10 +192,7 @@ def likelihood_wrapper_scalar(theta,timeBins,N,freqs,times,logfreqs,log1minusfre
 def traj_wrapper(theta,timeBins,N,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights = []):
 	S = theta
 	Sprime = np.concatenate((S,[0.0]))
-	if np.any(np.abs(Sprime) > sMax):
-		print('WARNING: selection coefficient exceeds bounds. Maybe change --sMax?')
-		return 1e+308
-
+	
 	sel = Sprime[np.digitize(epochs,timeBins,right=False)-1]
 	T = len(epochs)
 	F = len(freqs)
