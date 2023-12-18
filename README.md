@@ -89,7 +89,7 @@ $ python PATH/inference.py
 
 **--ancientSamps** The input file of ancient genotype proabilities as described above. You can supply a **--times** file, or an **--ancientSamps** file, or both. The times in this file, as with all times in CLUES2, should be measured in generations.
 
-**--popFreq**  The modern derived allele frequency.
+**--popFreq** The modern derived allele frequency.
 
 **--N** The effective population size (Ne). This is the HAPLOID effective population size, denoting the number of haplotypes in a given population, NOT the number of diploid individuals. 100 diploid humans corresponds to an N value of 200. Either this or a coal file must be supplied, but not both.
 
@@ -97,9 +97,9 @@ $ python PATH/inference.py
 
 **--tCutoff** The maximum time (in generations) to be considered in the analysis.
 
-**--df** This is the number of discretization points that is used to bin the allele frequencies. A higher number will result in less error due to rounding of allele frequencies but at increased computational cost. We find that having a finer discretization (higher df) is more important when N is large. This is because large population sizes result in smaller allele frequency fluctuations from generation to generation and only a fine discretization grid will be able to model them accurately. The most rigorous way to set df is to steadily increase df until the results appear to have converged, but we find that practically the default value of 450 is sufficient for nearly all cases.
+**--df** (optional) This is the number of discretization points that is used to bin the allele frequencies. A higher number will result in less error due to rounding of allele frequencies but at increased computational cost. We find that having a finer discretization (higher df) is more important when N is large. This is because large population sizes result in smaller allele frequency fluctuations from generation to generation and only a fine discretization grid will be able to model them accurately. The most rigorous way to set df is to steadily increase df until the results appear to have converged, but we find that practically the default value of 450 is sufficient for nearly all cases.
 
-**--timeBins** A list of epoch breakpoints, sorted in increasing order. These, along with 0 and tCutoff, give the endpoints of the disjoint time intervals in which independent selection coefficients will be inferred. For example, if --timeBins 200 300 is used, 3 separate selection coefficients will be inferred, for each of the intervals [0,200), [200,300), and [300,tCutoff). If this argument is not supplied, one selection coefficient will be inferred for the interval [0,tCutoff). The youngest breakpoint must be greater than 0 and the oldest breakpoint must be less than tCutoff.
+**--timeBins** (optional) A list of epoch breakpoints, sorted in increasing order. These, along with 0 and tCutoff, give the endpoints of the disjoint time intervals in which independent selection coefficients will be inferred. For example, if --timeBins 200 300 is used, 3 separate selection coefficients will be inferred, for each of the intervals [0,200), [200,300), and [300,tCutoff). If this argument is not supplied, one selection coefficient will be inferred for the interval [0,tCutoff). The youngest breakpoint must be greater than 0 and the oldest breakpoint must be less than tCutoff.
 
 **--out** The prefix of the output files.
 
@@ -139,9 +139,9 @@ $ python PATH/plot_traj.py
 
 **--figure** The desired figure prefix.
 
-**--posterior_intervals** A list of the posterior intervals to plot. Must all be numbers between 0.0 and 1.0, exclusive.  Default value is [0.5, 0.75, 0.95, 0.999].
+**--posterior_intervals** (optional) A list of the posterior intervals to plot. Must all be numbers between 0.0 and 1.0, exclusive.  Default value is [0.5, 0.75, 0.95, 0.999].
 
-**--generation_time** (optional) The number of years per generation.
+**--generation_time** (optional) The number of years per generation. Used to set the x-axis labels in units of years. If not specified, the x-axis will be given in generations.
 
 ## This step will produce (in the current working directory)
 
