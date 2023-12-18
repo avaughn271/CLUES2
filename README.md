@@ -148,10 +148,9 @@ $ python PATH/plot_traj.py
 ***figure.png***  A figure representing a heatmap of the posterior density of the derived allele frequency. For each generation and each number $x$ in the **--posterior_intervals** list, we plot the interval of frequency bins of minimum width that contains at least $x%$ of the posterior probability. Conceptually, this can be thought of as plotting a set of concentric confidence intervals at each generation. If **--generation_time**  is supplied, then time is converted from generations to years using this conversion factor. Otherwise, time will be plotted in generations.
 
 
-### Example commands
+### Example Commands
 
-TODO
-
+A shell script containing example commands for CLUES2 can be found at example.sh in the example folder. Also contained within this folder are some example input files to the different steps of CLUES2. (The contents of this folder, as well as the possible arguments for CLUES2, might change substantially as CLUES2 undergoes revisions and as we receive documentation comments from users. We will try to keep it as updated as possible.)
 
 
 ## Input File Details
