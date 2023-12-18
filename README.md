@@ -27,63 +27,6 @@ https://biopython.org/wiki/Download
 
 https://pandas.pydata.org/docs/getting_started/install.html
 
-### Example commands
-
-TODO
-
-## Input file
-
-CLUES2 has been tested on two different input files: posterior samples of ARGs and historic allele genotypes. We describe the input files here:
-
-Times: These are the posterior samples of ARGs, more specifically the posterior samples of pairwise coalescence times at the specified SNP. We do not explicitly need the tree topology due to the exchangeability of lineages within the derived and ancestral classes. If you have $M$ samples from the posterior, this file will have $2M$ lines. If we iterate through the samples from  $m=0$ to $m=M-1$, the ($m+1$)'th line will be the coalescence times of derived lineages of the $m$'th sample. The ($m+2$)'th line will be the coalescence times of ancestral lineages of the $m$'th sample. For example, if we sample the following $M=3$ trees from the posterior:
-
-
-<img src="https://github.com/avaughn271/CLUES2/blob/main/example/clues1.png">
-
-The file Times would be:
-
-```bash
-200,700,850
-1000,1250
-170,900,1200
-50,1300
-125,900,2105
-83.6,1700
-```
-We see that there is one entry for each coalescence event in the tree. A coalescence node is a derived node if all of its children have the derived allele **or** one of the immediate child branches of that node is the branch on which the mutation must have arose (marked by a dashed line in the images above). A coalescence event is an ancestral node otherwise. In practice, the algorithm looks at the oldest derived coalescence node and properly treats it as a mixed lineage coalescence event as described in the manuscript, but we label it as a derived node here for simplicity. Note also that the coalescence times in each line must be sorted. You may choose to use only M=1 sample and give CLUES2 a times file with only 2 lines, but you should note that the importance sampling framework will not be used but the given tree will simply be treated as the observed true coalescence tree.
-
-Ancient Times: CLUES2 can also be run on ARGs on ancient data. The input file format is the same as that given above, except for the addition of two lines at the beginning of the file that list the sampling times of the different lineages. In particular, the first line is a semicolon-separated line listing the nonzero sampling times of derived lineages (sampling times of ancient haplotypes only, modern haplotypes are not considered). The second line is a semicolon-separated line listing the nonzero sampling times of ancestral lineages (sampling times of ancient haplotypes only, modern haplotypes are not considered). The subsequent lines are the derived coalescence times of the first importance sample, the ancestral  coalescence times of the first importance sample, the derived coalescence times of the second importance sample, etc. as described above. For example, assume we have 2 modern ancestral lineages, 1 ancestral lineage sampled at time 60, 1 modern derived lineage, and 2 derived lineages sampled at times 40 and 50 respectively. If we sample the following 3 trees (where the parentheses in each leaf node represent the sampling times):
-
-<img src="https://github.com/avaughn271/CLUES2/blob/main/example/cluesancient1.png">
-
-The file Times would be
-
-```bash
-40;50
-60
-200,700,850
-1000,1250
-170,900,1200
-100,1300
-125,900,2105
-83.6,1700
-```
-
-You read this file into CLUES2 with the --times argument, as when using only modern data. CLUES2 then determines whether ancient samples are being used and correctly parses the input file into the appropriate tree structure.
-
-Samples: These input files look like the following file. The first column is the sampling times of the ancient samples (given in generations). The second column is the log genotype probability of 0/0 (homozygous ancestral). The third column is the log genotype probability of 0/1 (which is to say 1|0 or 0|1). The fourth column is the log genotype probability of 1/1 (homozygous derived). For example, the first row of the following file means that an individual was sampled 16.45 generations ago and we are 100% certain has a 0/0 genotype. The second row of the following file means that an individual was sampled 170.6 generations ago to which we assign a probability of 0.105 of being 0/0, a probability 0.878 of being 0/1, and a probability of 0.017 of being 1/1. Uncertainty in genotype calls of ancient data can be caused by imputation. The data should be sorted in increasing order by sampling time.
-
-```bash
-16.45 0.0e+00 -inf -inf
-170.6 -2.25379492882461 -0.13010868534702 -4.07454193492592
-190.05 -0.787457860031187 -0.632993257740198 -4.3428059215206
-213 -inf -inf 0.0
-...
-496.7 0.0 -inf -inf
-498.31 0.0 -inf -inf
-500.0 0.0 -inf -inf
-```
-
 ## Running CLUES
 
 CLUES has 3 steps:
@@ -203,5 +146,66 @@ $ python PATH/plot_traj.py
 ## This step will produce (in the current working directory)
 
 ***figure.png***  A figure representing a heatmap of the posterior density of the derived allele frequency. For each generation and each number $x$ in the **--posterior_intervals** list, we plot the interval of frequency bins of minimum width that contains at least $x%$ of the posterior probability. Conceptually, this can be thought of as plotting a set of concentric confidence intervals at each generation. If **--generation_time**  is supplied, then time is converted from generations to years using this conversion factor. Otherwise, time will be plotted in generations.
+
+
+### Example commands
+
+TODO
+
+
+
+## Input File Details
+
+CLUES2 has been tested on two different input files: posterior samples of ARGs and historic allele genotypes. We describe the input files here:
+
+Times: These are the posterior samples of ARGs, more specifically the posterior samples of pairwise coalescence times at the specified SNP. We do not explicitly need the tree topology due to the exchangeability of lineages within the derived and ancestral classes. If you have $M$ samples from the posterior, this file will have $2M$ lines. If we iterate through the samples from  $m=0$ to $m=M-1$, the ($m+1$)'th line will be the coalescence times of derived lineages of the $m$'th sample. The ($m+2$)'th line will be the coalescence times of ancestral lineages of the $m$'th sample. For example, if we sample the following $M=3$ trees from the posterior:
+
+
+<img src="https://github.com/avaughn271/CLUES2/blob/main/example/clues1.png">
+
+The file Times would be:
+
+```bash
+200,700,850
+1000,1250
+170,900,1200
+50,1300
+125,900,2105
+83.6,1700
+```
+We see that there is one entry for each coalescence event in the tree. A coalescence node is a derived node if all of its children have the derived allele **or** one of the immediate child branches of that node is the branch on which the mutation must have arose (marked by a dashed line in the images above). A coalescence event is an ancestral node otherwise. In practice, the algorithm looks at the oldest derived coalescence node and properly treats it as a mixed lineage coalescence event as described in the manuscript, but we label it as a derived node here for simplicity. Note also that the coalescence times in each line must be sorted. You may choose to use only M=1 sample and give CLUES2 a times file with only 2 lines, but you should note that the importance sampling framework will not be used but the given tree will simply be treated as the observed true coalescence tree.
+
+Ancient Times: CLUES2 can also be run on ARGs on ancient data. The input file format is the same as that given above, except for the addition of two lines at the beginning of the file that list the sampling times of the different lineages. In particular, the first line is a semicolon-separated line listing the nonzero sampling times of derived lineages (sampling times of ancient haplotypes only, modern haplotypes are not considered). The second line is a semicolon-separated line listing the nonzero sampling times of ancestral lineages (sampling times of ancient haplotypes only, modern haplotypes are not considered). The subsequent lines are the derived coalescence times of the first importance sample, the ancestral  coalescence times of the first importance sample, the derived coalescence times of the second importance sample, etc. as described above. For example, assume we have 2 modern ancestral lineages, 1 ancestral lineage sampled at time 60, 1 modern derived lineage, and 2 derived lineages sampled at times 40 and 50 respectively. If we sample the following 3 trees (where the parentheses in each leaf node represent the sampling times):
+
+<img src="https://github.com/avaughn271/CLUES2/blob/main/example/cluesancient1.png">
+
+The file Times would be
+
+```bash
+40;50
+60
+200,700,850
+1000,1250
+170,900,1200
+100,1300
+125,900,2105
+83.6,1700
+```
+
+You read this file into CLUES2 with the --times argument, as when using only modern data. CLUES2 then determines whether ancient samples are being used and correctly parses the input file into the appropriate tree structure.
+
+Samples: These input files look like the following file. The first column is the sampling times of the ancient samples (given in generations). The second column is the log genotype probability of 0/0 (homozygous ancestral). The third column is the log genotype probability of 0/1 (which is to say 1|0 or 0|1). The fourth column is the log genotype probability of 1/1 (homozygous derived). For example, the first row of the following file means that an individual was sampled 16.45 generations ago and we are 100% certain has a 0/0 genotype. The second row of the following file means that an individual was sampled 170.6 generations ago to which we assign a probability of 0.105 of being 0/0, a probability 0.878 of being 0/1, and a probability of 0.017 of being 1/1. Uncertainty in genotype calls of ancient data can be caused by imputation. The data should be sorted in increasing order by sampling time.
+
+```bash
+16.45 0.0e+00 -inf -inf
+170.6 -2.25379492882461 -0.13010868534702 -4.07454193492592
+190.05 -0.787457860031187 -0.632993257740198 -4.3428059215206
+213 -inf -inf 0.0
+...
+496.7 0.0 -inf -inf
+498.31 0.0 -inf -inf
+500.0 0.0 -inf -inf
+```
+
 
 
