@@ -150,8 +150,7 @@ $ python PATH/plot_traj.py
 
 ### Example Commands
 
-A shell script containing example commands for CLUES2 can be found at example.sh in the example folder. Also contained within this folder are some example input files to the different steps of CLUES2. (The contents of this folder, as well as the possible arguments for CLUES2, might change substantially as CLUES2 undergoes revisions and as we receive documentation comments from users. We will try to keep it as updated as possible.)
-
+A shell script containing example commands for CLUES2 can be found at example.sh in the example folder. Also contained within this folder are some example input files to the different steps of CLUES2. (The contents of this folder, as well as the possible arguments for CLUES2, might change substantially as CLUES2 undergoes revisions and as we receive documentation comments from users. We will try to keep it as updated as possible.) When all simulation and real data analysis has been finalized, all scripts used to generate and process this data will be added to this GitHub as well.
 
 ## Input File Details
 
