@@ -7,3 +7,6 @@ python PATH/CLUES2/inference.py --popFreq  0.8 --ancientSamps exampleAncientSamp
 #We can also plot the reconstructed derived allele frequencies of the above commands
 python PATH/CLUES2/plot_traj.py --freqs  output1_freqs.txt --post output1_post.txt --figure ExampleFigure1  --generation_time 28.0
 python PATH/CLUES2/plot_traj.py --freqs  output2_freqs.txt --post output2_post.txt --figure ExampleFigure2  --generation_time 28.0
+
+##An example of how to obtain samples of coalescence times as an input file to CLUES2 from Relate samples would be:
+python PATH/CLUES2/RelateToCLUES.py --RelateSamples example.newick --DerivedFile IsDerived.txt  --out InputTimes
