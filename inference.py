@@ -399,7 +399,10 @@ if __name__ == "__main__":
 	toprint = toprint + "\t" + '%.2f'%(-(chi2.logsf(numericloglik + numericloglik, degreesoffreedom ) ) / np.log(10) )
 	for s,t,u in zip(S,timeBins[:-1],timeBins[1:]):
 		toprint = toprint + "\t" + '%d'%(t)
-		toprint = toprint + "\t" + '%d'%(u)
+		if u <= args.tCutoff:
+			toprint = toprint + "\t" + '%d'%(u)
+		else:
+			toprint = toprint + "\t" + '%d'%(args.tCutoff)
 		toprint = toprint + "\t" + '%.5f'%(s)
 		FirstLine = FirstLine + "\t" + "Epoch" + str(epochnum) + "_start" + "\t" +  "Epoch" + str(epochnum)   + "_end"  + "\t" +  "SelectionMLE" + str(epochnum)
 		epochnum = epochnum + 1
