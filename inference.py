@@ -19,10 +19,10 @@ def parse_args():
 	parser.add_argument('--ancientHaps',type=str,default=None)
 	parser.add_argument('--out',type=str,default=None)
 
-	parser.add_argument('--N',type=float,default=10**4)
+	parser.add_argument('--N',type=float,default=None)
 	parser.add_argument('--coal',type=str,default=None,help='path to Relate .coal file. Negates --N option.')
 
-	parser.add_argument('--tCutoff',type=float,default=1000)
+	parser.add_argument('--tCutoff',type=float,default=None)
 	parser.add_argument('--timeBins',type=str,default=None, nargs='+')
 	parser.add_argument('--sMax',type=float,default=0.1)
 	parser.add_argument('--df',type=int,default=450)
@@ -132,6 +132,9 @@ def load_data(args):
 		N = np.array(list(N)+[N[-1]])
 		Ne = N[np.digitize(epochs,Nepochs)-1]
 	else:
+		if args.N == None:
+			print("Must specify either N or .coal file")
+			exit()
 		Ne = args.N * np.ones(int(tCutoff))
 	# set up freq bins
 	beta05quantiles = np.genfromtxt(os.path.dirname(__file__) + '/utils/Beta05Quantiles.txt')
