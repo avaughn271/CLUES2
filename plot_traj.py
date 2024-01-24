@@ -61,12 +61,12 @@ for indexx in range(len(ConfidenceIntervals)):
                 MATRIXTOPLOT[j, int(timeinterval)] = np.max([MATRIXTOPLOT[j, int(timeinterval)], ColorIntensity[indexx]])
 
 if args.generation_time == -1.0:
-    plt.pcolormesh(epochs[:-1],freqs, MATRIXTOPLOT)
+    plt.pcolormesh(epochs[:-1],freqs, MATRIXTOPLOT, shading='auto')
     plt.axis((0,len(epochs[:-1]),0,1.0))
     plt.ylabel('Derived allele frequency',fontsize=20)
     plt.xlabel('Generations before present',fontsize=20)
 else:
-    plt.pcolormesh(epochs[:-1] * args.generation_time,freqs, MATRIXTOPLOT)
+    plt.pcolormesh(epochs[:-1] * args.generation_time,freqs, MATRIXTOPLOT, shading='auto')
     plt.axis((0,len(epochs[:-1]) * args.generation_time,0,1.0))
     plt.ylabel('Derived allele frequency',fontsize=20)
     plt.xlabel('Years before present',fontsize=20)
