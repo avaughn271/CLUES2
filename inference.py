@@ -4,8 +4,7 @@ from scipy.special import logsumexp
 from scipy.optimize import minimize, minimize_scalar
 import argparse
 import os
-from scipy.stats import chi2
-from scipy.stats import norm
+from scipy.stats import chi2, norm, beta
 from numpy.random import normal
 from scipy.stats import multivariate_normal
 
@@ -137,10 +136,13 @@ def load_data(args):
 			exit()
 		Ne = args.N * np.ones(int(tCutoff))
 	# set up freq bins
-	beta05quantiles = np.genfromtxt(os.path.dirname(__file__) + '/utils/Beta05Quantiles.txt')
-	freqs = np.quantile(beta05quantiles, np.linspace(0.0, 1.0, args.df))
+	freqs = beta.ppf(np.linspace(0.0, 1.0, args.df), 0.5, 0.5)
+	freqs[0] = 1e-12
+	freqs[len(freqs) - 1] = 1 - 1e-12
 	logfreqs = np.log(freqs)
 	log1minusfreqs = np.log(np.subtract(1,freqs))
+	freqs[0] = 0.0
+	freqs[len(freqs) - 1] = 1.0
 
 	# load time bins (for defining selection epochs)
 	if args.timeBins != None:
@@ -289,9 +291,13 @@ if __name__ == "__main__":
 	sMax = args.sMax
 	timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq,logfreqs,log1minusfreqs,derSampledTimes,ancSampledTimes = load_data(args)
 	# read in global Phi(z) lookups
-	z_bins = np.genfromtxt(os.path.dirname(__file__) + '/utils/z_bins.txt')
-	z_logcdf = np.genfromtxt(os.path.dirname(__file__) + '/utils/z_logcdf.txt')
-	z_logsf = np.genfromtxt(os.path.dirname(__file__) + '/utils/z_logsf.txt')
+	linearspacing = np.linspace(0.0, 1.0, 2000)
+	linearspacing[0] = 1e-10
+	linearspacing[len(linearspacing) - 1] = 1 - 1e-10
+
+	z_bins = norm.ppf(linearspacing)
+	z_logcdf = norm.cdf(z_bins)
+	z_logsf = z_logcdf # can delete this later.
 
 	Ne *= 1/2
 	noCoals = int(noCoals)

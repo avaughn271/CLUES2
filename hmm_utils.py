@@ -21,8 +21,12 @@ def _logsumexpb(a,b):
     a_max = np.max(a)
     return np.log(np.sum(b * np.exp(a - a_max))) + a_max
 
-@njit('float64[:](int64,float64,float64,float64[:],float64[:],float64[:],float64[:])',cache=True)
-def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf):
+@njit('float64(float64,float64,float64,float64[:],float64[:])',cache=True)
+def general_normal_cdf(x,mean, sd, xvals, yvals):
+    return np.interp( (x - mean)/sd , xvals, yvals)
+
+@njit('float64[:](float64[:],int64,float64,float64,float64[:],float64[:],float64[:],float64[:])',cache=True)
+def _log_trans_prob(BINGAPS, i,N,s,FREQS,z_bins,z_logcdf,z_logsf):
     """Standard logsumexp
     INPUT: i - an index. ranges from 0 to df-1 inclusive. Index of frequency bin
            N - diploid effective popualtion size (smaller one)
@@ -40,35 +44,27 @@ def _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf):
 	
     p = FREQS[i]    #starting frequency
     lf = len(FREQS)  # number of freq bins
-    logP = np.NINF * np.ones(lf)  # initialize logP
+    logP = 0.0 * np.ones(lf)  # initialize logP, not log at the beginning.
     mu = p-s*p*(1.0-p) # this is the only place where dominance or selection changes come in 
     #            This should be the inverse of (x+sx)/(1+sx)
     # This is the mean of the normal distribution going back in time.
-    sigma = np.sqrt(p*(1.0-p)/(4.0*N)) # variance of the normal approx
+    sigma = np.sqrt(p*(1.0-p)/(4.0*N)) #IS THIS RIGHT????? maybe change back to 4 * N
 
-    logP[0] = np.interp(np.array([(FREQS[0]-mu)/sigma]),z_bins,z_logcdf)[0]
-    logP[lf-1] = np.interp(np.array([(FREQS[lf-1]-mu)/sigma]),z_bins,z_logsf)[0]
+    lowerfrequencybound = mu - sigma * 3.3 # guarantees 99.9 of probability is computed.
+    upperfrequnecybound = mu + sigma * 3.3
+    lowerindex = np.argmin(np.abs(np.subtract(FREQS, lowerfrequencybound))) - 1
+    upperindec = np.argmin(np.abs(np.subtract(FREQS, upperfrequnecybound))) + 1
+    upperindec = min(upperindec, lf)
+    lowerindex = max(lowerindex, 0)
 
-    maximumabsolutefrequencychangepergeneration = 0.05 #Approximation 1.
-    lowerfrequencybound = mu - maximumabsolutefrequencychangepergeneration
-    upperfrequnecybound = mu + maximumabsolutefrequencychangepergeneration
-    lowerindex = np.argmin(np.abs(np.subtract(FREQS, lowerfrequencybound)))
-    upperindec = np.argmin(np.abs(np.subtract(FREQS, upperfrequnecybound)))
-
-    for j in range(max(lowerindex,1),min(lf-1, upperindec)):
-        if j == 1:
-            mlo = FREQS[0]
+    for j in range(lowerindex,upperindec):
+        if j == 0:
+            logP[j] = general_normal_cdf(BINGAPS[j],   mu,   sigma, z_bins, z_logcdf)
+        elif j == lf - 1:
+            logP[lf-1] = 1 - general_normal_cdf(BINGAPS[-1],   mu,   sigma, z_bins, z_logcdf)
         else:
-            mlo = np.mean(np.array([FREQS[j],FREQS[j-1]]))
-        if j == lf-2:
-            mhi = FREQS[j+1]
-        else:
-            mhi = np.mean(np.array([FREQS[j],FREQS[j+1]]))
-
-        l1 = np.interp(np.array([(mlo-mu)/sigma]),z_bins,z_logcdf)[0]
-        l2 = np.interp(np.array([(mhi-mu)/sigma]),z_bins,z_logcdf)[0]
-        logP[j] = _logsumexpb(np.array([l1,l2]),np.array([-1.0,1.0]))
-    return logP
+            logP[j] = general_normal_cdf(BINGAPS[j], mu, sigma, z_bins, z_logcdf) - general_normal_cdf(BINGAPS[j - 1], mu, sigma, z_bins, z_logcdf)
+    return np.log(logP / np.sum(logP)) # renormalize
 
 @njit('float64[:,:](float64,float64,float64[:],float64[:],float64[:],float64[:])',cache=True)
 def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf):
@@ -79,10 +75,17 @@ def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf):
     """
 	lf = len(FREQS)
 	p1 = np.zeros((lf,lf))
+    
+	BINGAPS = (FREQS[1:] + FREQS[0:(len(FREQS) - 1)]) / 2.0
+	p1[0,0] = 1.0 # these are obsorbing states.
+	p1[lf-1,lf-1] = 1.0
+	p1[0,:] = np.log(p1[0,:])
+	p1[lf-1,:] = np.log(p1[lf-1,:])
 
 	# load rows into p1
-	for i in range(lf):  ###can still significantly speed this up by maybe using a better truncator than 0.05 in either direction
-		p1[i,:] = _log_trans_prob(i,N,s,FREQS,z_bins,z_logcdf,z_logsf)
+	for i in range(1, lf - 1):  ###can still significantly speed this up by maybe using a better truncator than 0.05 in either direction
+		p1[i,:] = _log_trans_prob(BINGAPS, i,N,s,FREQS,z_bins,z_logcdf,z_logsf)
+
 	return(p1)
 
 @njit('float64(float64[:],float64,float64)')
@@ -170,26 +173,20 @@ def forward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,l
             currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)
             upperindex = np.zeros(lf)
             lowerindex = np.zeros(lf)
-            maximumabsoluteprobabilityconcentration =  0.999  #Approximation 2a
-            for ii in range(lf):
-                exprow = np.exp(currTrans[ii,:])  # note that the indexing here is reversed as opposed to the backward, because the usage of currtrans is transposed!!!
-                exprowsum = np.sum(exprow) * maximumabsoluteprobabilityconcentration
-                lowerbound = np.argmax(exprow)
+            neginf = np.log(0.0)
+            for ii in range(lf):  #calculate the range of the nonzero entries of the transition matrix.
+                chosenrow =  currTrans[ii,:]
+                lowerbound = np.argmax(currTrans[ii,:])
                 upperbound = lowerbound + 1
-                totalsumm = exprow[lowerbound]
-                while (totalsumm < exprowsum):
+                while (chosenrow[lowerbound] > neginf):
                     if lowerbound == 0:
-                        totalsumm = totalsumm + exprow[upperbound]
-                        upperbound = upperbound + 1
-                    elif upperbound == lf:
-                        lowerbound = lowerbound - 1
-                        totalsumm = totalsumm + exprow[lowerbound]
-                    elif exprow[lowerbound - 1] >= exprow[upperbound]:
-                        lowerbound = lowerbound - 1
-                        totalsumm = totalsumm + exprow[lowerbound]
-                    else:
-                        totalsumm = totalsumm + exprow[upperbound]
-                        upperbound = upperbound + 1
+                        break
+                    lowerbound = lowerbound - 1
+                while (chosenrow[upperbound] > neginf):
+                    if upperbound == lf:
+                        break
+                    upperbound = upperbound + 1
+
                 upperindex[ii] = upperbound
                 lowerindex[ii] = lowerbound
         
@@ -324,29 +321,22 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
                 currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)   # note that the indexing here is reversed as opposed to the forward, because the usage of currtrans is transposed!!!
             upperindex = np.zeros(lf)
             lowerindex = np.zeros(lf)
-            maximumabsoluteprobabilityconcentration = 0.999  #Approximation 2b
-            for ii in range(lf):
-                exprow = np.exp(currTrans[:,ii]) ###deleted exp
-                exprowsum = np.sum(exprow) * maximumabsoluteprobabilityconcentration
-                lowerbound = np.argmax(exprow)
+            neginf = np.log(0.0)
+            for ii in range(lf):  #calculate the range of the nonzero entries of the transition matrix.
+                chosenrow =  currTrans[:,ii]
+                lowerbound = np.argmax(currTrans[:,ii])
                 upperbound = lowerbound + 1
-                totalsumm = exprow[lowerbound]
-                while (totalsumm < exprowsum):
+                while (chosenrow[lowerbound] > neginf):
                     if lowerbound == 0:
-                        totalsumm = totalsumm + exprow[upperbound]
-                        upperbound = upperbound + 1
-                    elif upperbound == lf:
-                        lowerbound = lowerbound - 1
-                        totalsumm = totalsumm + exprow[lowerbound]
-                    elif exprow[lowerbound - 1] >= exprow[upperbound]:
-                        lowerbound = lowerbound - 1
-                        totalsumm = totalsumm + exprow[lowerbound]
-                    else:
-                        totalsumm = totalsumm + exprow[upperbound]
-                        upperbound = upperbound + 1
+                        break
+                    lowerbound = lowerbound - 1
+                while (chosenrow[upperbound] > neginf):
+                    if upperbound == lf:
+                        break
+                    upperbound = upperbound + 1
+
                 upperindex[ii] = upperbound
                 lowerindex[ii] = lowerbound
-            
                  
         #grab ancient GL rows
         ancientGLrows = ancientGLs[ancientGLs[:,0] > cumGens]
