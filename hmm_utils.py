@@ -64,7 +64,7 @@ def _log_trans_prob(BINGAPS, i,N,s,FREQS,z_bins,z_logcdf,z_logsf):
             logP[lf-1] = 1 - general_normal_cdf(BINGAPS[-1],   mu,   sigma, z_bins, z_logcdf)
         else:
             logP[j] = general_normal_cdf(BINGAPS[j], mu, sigma, z_bins, z_logcdf) - general_normal_cdf(BINGAPS[j - 1], mu, sigma, z_bins, z_logcdf)
-    return np.log(logP / np.sum(logP)) # renormalize
+    return np.log(logP / np.sum(logP)) # renormalize, change so we only compute log of relevant entries??
 
 @njit('float64[:,:](float64,float64,float64[:],float64[:],float64[:],float64[:])',cache=True)
 def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf):
@@ -275,7 +275,7 @@ def forward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,l
         cumGens -= 1.0
         alphaMat[tb,:] = alpha
     return alphaMat
-    
+
 @njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],float64[:,:],int64,int64,float64)',cache=True)
 def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,TRANMATRIX, noCoals=1,precomputematrixboolean=0,currFreq=-1):
 
@@ -293,8 +293,6 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
              maxdistance = distt
              indexofcurrent = i
     alpha[indexofcurrent] = 0.0 # index of all -Infs except freq bin closest to the true current freq
-    currentminindex = indexofcurrent
-    currentmaxindex = indexofcurrent
 
     T = len(epochs)-1
     alphaMat = np.full((T+1,lf), -1e20)
@@ -405,30 +403,68 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
 
             nDerRemaining += len(numberofsampledder[numberofsampledder <= cumGens + 1.0])
             nAncRemaining += len(numberofsampledanc[numberofsampledanc <= cumGens + 1.0])
+        
+        maxloc = np.argmax(prevAlpha)
+        previouscolumn = np.exp(prevAlpha - prevAlpha[maxloc])
+        prevsumtarget = np.sum(previouscolumn) * 0.999
+        runningsum = previouscolumn[maxloc]
+        currlower = maxloc - 1
+        currhigher = maxloc + 1
+        while (runningsum < prevsumtarget):
+            if currhigher > lf - 1:
+                runningsum = runningsum + previouscolumn[currlower]
+                currlower = currlower - 1
+            elif currlower < 0:
+                runningsum = runningsum + previouscolumn[currhigher]
+                currhigher = currhigher + 1
+            else:
+                lowerpossible =  previouscolumn[currlower]
+                upperpossible =  previouscolumn[currhigher]
+                if lowerpossible < upperpossible:
+                    runningsum = runningsum + previouscolumn[currhigher]
+                    currhigher = currhigher + 1
+                else:
+                    runningsum = runningsum + previouscolumn[currlower]
+                    currlower = currlower - 1
+        if currlower < 0:
+            currlower = currlower + 1
+        if currhigher > lf -1:
+            currhigher = currhigher - 1
+        lowerbounddd = 0
+        upperbounddd = lf
+        if freqs[currhigher] - freqs[currlower] < 0.33:
+            indexofcurrent = -1
+            maxdistance = 100.0
+            target =  freqs[currlower]  - 0.04 - 2*freqs[currhigher]  + 2*freqs[currlower]
+            for i in range(lf):
+                distt = abs(freqs[i] - target) 
+                if distt < maxdistance:
+                    maxdistance = distt
+                    indexofcurrent = i
+            lowerbounddd = indexofcurrent
 
-        #if precomputematrixboolean == 1: # should only do this in importance sampling case.
-        upperbounddd = round(min(lf, currentmaxindex + lf/19.0))  #Approximation 3. Set this to lf and next line to 0 to turn off the beam search.
-        lowerbounddd = round(max(0, currentminindex - lf/19.0))
+            indexofcurrent = -1
+            maxdistance = 100.0
+            target =  freqs[currhigher] + 0.04 + 2*freqs[currhigher] -  2*freqs[currlower]
+            for i in range(lf):
+                distt = abs(freqs[i] - target)
+                if distt < maxdistance:
+                    maxdistance = distt
+                    indexofcurrent = i
+            upperbounddd = indexofcurrent
+            upperbounddd = upperbounddd + 1
+
+        #upperbounddd = round(min(lf, currhigher + lf/20.0))  #Approximation 3. Set this to lf and next line to 0 to turn off the beam search.
+        #lowerbounddd = round(max(0, currlower - lf/20.0))
+        #print("bounds", tb, lowerbounddd, upperbounddd )
         if nDerRemaining == 1:
             lowerbounddd = min(lowerbounddd, 0)
 
         ####################################
-        alpahmax = -1e20 
         for i in range(lowerbounddd,upperbounddd):
             alpha[i] = _logsumexp(prevAlpha[lowerindex[i]:upperindex[i]] + currTrans[lowerindex[i]:upperindex[i],i]) + glEmissions[i] + coalEmissions[i]
-            if alpha[i] > alpahmax:
-                alpahmax = alpha[i]
             if np.isnan(alpha[i]):
                 alpha[i] = -np.inf
-        boundss = alpahmax - 200.0
-        for i in range(0,lf):
-            if alpha[i] > boundss:
-                currentminindex = i
-                break
-        for i in range(lf,0,-1):
-            if alpha[i] > boundss:
-                currentmaxindex = i
-                break
 
         prevNt = Nt
         prevst = st
