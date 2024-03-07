@@ -25,8 +25,8 @@ def _logsumexpb(a,b):
 def general_normal_cdf(x,mean, sd, xvals, yvals):
     return np.interp( (x - mean)/sd , xvals, yvals)
 
-@njit('float64[:](float64[:],int64,float64,float64,float64[:],float64[:],float64[:],float64[:])',cache=True)
-def _log_trans_prob(BINGAPS, i,N,s,FREQS,z_bins,z_logcdf,z_logsf):
+@njit('float64[:](float64[:],int64,float64,float64,float64[:],float64[:],float64[:],float64[:],float64)',cache=True)
+def _log_trans_prob(BINGAPS, i,N,s,FREQS,z_bins,z_logcdf,z_logsf,h):
     """Standard logsumexp
     INPUT: i - an index. ranges from 0 to df-1 inclusive. Index of frequency bin
            N - diploid effective popualtion size (smaller one)
@@ -45,10 +45,12 @@ def _log_trans_prob(BINGAPS, i,N,s,FREQS,z_bins,z_logcdf,z_logsf):
     p = FREQS[i]    #starting frequency
     lf = len(FREQS)  # number of freq bins
     logP = 0.0 * np.ones(lf)  # initialize logP, not log at the beginning.
-    mu = p-s*p*(1.0-p) # this is the only place where dominance or selection changes come in 
+    #mu = p-s*p*(1.0-p) # this is the only place where dominance or selection changes come in 
     #            This should be the inverse of (x+sx)/(1+sx)
+    #print("h is:", h)
+    mu = p + (s* (-1 + p)* p* (-p + h *(-1 + 2* p))) /(-1 + s *(2* h *(-1 + p) - p) *p) # general dominance coefficient
     # This is the mean of the normal distribution going back in time.
-    sigma = np.sqrt(p*(1.0-p)/(4.0*N)) #IS THIS RIGHT????? maybe change back to 4 * N
+    sigma = np.sqrt(p*(1.0-p)/(2.0*N)) #IS THIS RIGHT????? maybe change back to 4 * N
 
     lowerfrequencybound = mu - sigma * 3.3 # guarantees 99.9 of probability is computed.
     upperfrequnecybound = mu + sigma * 3.3
@@ -66,8 +68,8 @@ def _log_trans_prob(BINGAPS, i,N,s,FREQS,z_bins,z_logcdf,z_logsf):
             logP[j] = general_normal_cdf(BINGAPS[j], mu, sigma, z_bins, z_logcdf) - general_normal_cdf(BINGAPS[j - 1], mu, sigma, z_bins, z_logcdf)
     return np.log(logP / np.sum(logP)) # renormalize, change so we only compute log of relevant entries??
 
-@njit('float64[:,:](float64,float64,float64[:],float64[:],float64[:],float64[:])',cache=True)
-def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf):
+@njit('float64[:,:](float64,float64,float64[:],float64[:],float64[:],float64[:],float64)',cache=True)
+def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf,h):
 	"""Same input as before, except i.
     Performs the above calculation on all possible input frequencies p.
     Output - A square matrix p1 of size df by df. Here p1[i,j] is the probability density
@@ -84,7 +86,7 @@ def _nstep_log_trans_prob(N,s,FREQS,z_bins,z_logcdf,z_logsf):
 
 	# load rows into p1
 	for i in range(1, lf - 1):  ###can still significantly speed this up by maybe using a better truncator than 0.05 in either direction
-		p1[i,:] = _log_trans_prob(BINGAPS, i,N,s,FREQS,z_bins,z_logcdf,z_logsf)
+		p1[i,:] = _log_trans_prob(BINGAPS, i,N,s,FREQS,z_bins,z_logcdf,z_logsf,h)
 
 	return(p1)
 
@@ -135,8 +137,8 @@ def _log_coal_density(times,n,epoch,xi,Ni,anc=0):
     logp += logPk
     return logp
 
-@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64)',cache=True)
-def forward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1):
+@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64,float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],int64)',cache=True)
+def forward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,h,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,noCoals=1):
 
     '''
     Moves forward in time from past to present
@@ -170,7 +172,7 @@ def forward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,l
 
         if prevNt != Nt or prevst != st:
             #change in selection/popsize, recalc trans prob
-            currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)
+            currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf,h)
             upperindex = np.zeros(lf)
             lowerindex = np.zeros(lf)
             neginf = np.log(0.0)
@@ -276,8 +278,8 @@ def forward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,l
         alphaMat[tb,:] = alpha
     return alphaMat
 
-@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],float64[:,:],int64,int64,float64)',cache=True)
-def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,TRANMATRIX, noCoals=1,precomputematrixboolean=0,currFreq=-1):
+@njit('float64[:,:](float64[:],float64[:,:],float64[:],float64[:],float64[:],float64[:],float64,float64[:],float64[:],float64[:],float64[:],float64[:],float64[:],float64[:,:],float64[:,:],float64[:,:],int64,int64,float64)',cache=True)
+def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,h,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,TRANMATRIX, noCoals=1,precomputematrixboolean=0,currFreq=-1):
 
     '''
     Moves backward in time from present to past
@@ -286,6 +288,7 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
     alpha = np.zeros(lf)
     indexofcurrent = -1
     maxdistance = 2.0
+
     for i in range(lf):
         distt = abs(freqs[i] - currFreq) 
         alpha[i] = -1e20
@@ -307,7 +310,6 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
 
     coalEmissions = np.zeros(lf)
     for tb in range(0,T):
-
         Nt = N[tb]
         epoch = np.array([cumGens,cumGens+1.0])
         st = sel[tb]
@@ -316,7 +318,8 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
             if precomputematrixboolean:
                 currTrans = TRANMATRIX
             else:
-                currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf)   # note that the indexing here is reversed as opposed to the forward, because the usage of currtrans is transposed!!!
+                currTrans = _nstep_log_trans_prob(Nt,st,freqs,z_bins,z_logcdf,z_logsf,h)   # note that the indexing here is reversed as opposed to the forward, because the usage of currtrans is transposed!!!
+
             upperindex = np.zeros(lf)
             lowerindex = np.zeros(lf)
             neginf = np.log(0.0)
@@ -328,14 +331,14 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,freqs,
                     if lowerbound == 0:
                         break
                     lowerbound = lowerbound - 1
-                while (chosenrow[upperbound] > neginf):
-                    if upperbound == lf:
-                        break
-                    upperbound = upperbound + 1
-
+                if upperbound != lf: # added
+                    while (chosenrow[upperbound] > neginf):
+                        if upperbound == lf:
+                            break
+                        upperbound = upperbound + 1
                 upperindex[ii] = upperbound
                 lowerindex[ii] = lowerbound
-                 
+
         #grab ancient GL rows
         ancientGLrows = ancientGLs[ancientGLs[:,0] > cumGens]
         ancientGLrows = ancientGLrows[ancientGLrows[:,0] <= cumGens + 1.0]
