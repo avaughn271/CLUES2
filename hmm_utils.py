@@ -50,7 +50,7 @@ def _log_trans_prob(BINGAPS, i,N,s,FREQS,z_bins,z_logcdf,z_logsf,h):
     #print("h is:", h)
     mu = p + (s* (-1 + p)* p* (-p + h *(-1 + 2* p))) /(-1 + s *(2* h *(-1 + p) - p) *p) # general dominance coefficient
     # This is the mean of the normal distribution going back in time.
-    sigma = np.sqrt(p*(1.0-p)/(4.0*N)) #IS THIS RIGHT????? maybe change back to 4 * N
+    sigma = np.sqrt(p*(1.0-p)/(2.0*N)) #IS THIS RIGHT????? maybe change back to 4 * N
 
     lowerfrequencybound = mu - sigma * 3.3 # guarantees 99.9 of probability is computed.
     upperfrequnecybound = mu + sigma * 3.3
