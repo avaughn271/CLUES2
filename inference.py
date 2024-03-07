@@ -27,6 +27,7 @@ def parse_args():
 	parser.add_argument('--df',type=int,default=450)
 	parser.add_argument('--noAlleleTraj', default=False, action='store_true', help='whether to compute the posterior allele frequency trajectory or not.')
 	parser.add_argument('--integration_points', type=int, default = -1)
+	parser.add_argument('--h', type=float, default = 0.5)
 
 	return parser.parse_args()
 
@@ -152,9 +153,9 @@ def load_data(args):
 		timeBins = np.array([0.0] + breakppoint + [tCutoff + 20.0])
 	else:
 		timeBins = np.array([0.0,tCutoff])
-	return timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq,logfreqs,log1minusfreqs,derSampledTimes,ancSampledTimes
+	return timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq,logfreqs,log1minusfreqs,derSampledTimes,ancSampledTimes,args.h
 
-def likelihood_wrapper(theta,timeBins,N,freqs,times, logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals,Weights = []):
+def likelihood_wrapper(theta,timeBins,N,h,freqs,times, logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals,Weights = []):
 	S = theta
 	Sprime = np.concatenate((S,[0.0]))
 	if np.any(np.abs(Sprime) > sMax):
@@ -173,17 +174,17 @@ def likelihood_wrapper(theta,timeBins,N,freqs,times, logfreqs,log1minusfreqs,z_b
 		M = tShape[2]
 		loglrs = np.zeros(M)
 		precompute = 0
-		tranmatrix = _nstep_log_trans_prob(N[0],sel[0],freqs,z_bins,z_logcdf,z_logsf) # this only handles the precompute case, just use initial values
+		tranmatrix = _nstep_log_trans_prob(N[0],sel[0],freqs,z_bins,z_logcdf,z_logsf,h) # this only handles the precompute case, just use initial values
 		if len(np.unique(N)) + len(np.unique(sel)) == 2:
 			precompute = 1
 		for i in range(M):
-			betaMat = backward_algorithm(sel,times[:,:,i],derSampledTimes,ancSampledTimes,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,tranmatrix,noCoals=noCoals,precomputematrixboolean=precompute,currFreq=currFreq)
+			betaMat = backward_algorithm(sel,times[:,:,i],derSampledTimes,ancSampledTimes,epochs,N,h,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,tranmatrix,noCoals=noCoals,precomputematrixboolean=precompute,currFreq=currFreq)
 			#np.savetxt(str(i)+"_beta.txt", betaMat, delimiter=",")
 			logl = logsumexp(betaMat[-2,:])
 			loglrs[i] = logl-Weights[i]
 		logl = -1 * (-np.log(M) + logsumexp(loglrs))
 	else:
-		betaMat = backward_algorithm(sel,t,derSampledTimes,ancSampledTimes,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,np.zeros((len(freqs),len(freqs))),noCoals=noCoals,precomputematrixboolean=0,currFreq=currFreq)
+		betaMat = backward_algorithm(sel,t,derSampledTimes,ancSampledTimes,epochs,N,h,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,np.zeros((len(freqs),len(freqs))),noCoals=noCoals,precomputematrixboolean=0,currFreq=currFreq)
 		logl = -logsumexp(betaMat[-2,:])
 	strr = ""
 	for i in range(len(theta)):
@@ -191,11 +192,11 @@ def likelihood_wrapper(theta,timeBins,N,freqs,times, logfreqs,log1minusfreqs,z_b
 	functionvals.write(strr + str(-logl) + "\n")
 	return logl
 
-def likelihood_wrapper_scalar(theta,timeBins,N,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals,Weights = []):
-	return(likelihood_wrapper([theta - 1.0],timeBins,N,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals,Weights))
+def likelihood_wrapper_scalar(theta,timeBins,N,h,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals,Weights = []):
+	return(likelihood_wrapper([theta - 1.0],timeBins,N,h,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals,Weights))
 #added +1 and -1 in order to get better convergence properties.
 
-def traj_wrapper(theta,timeBins,N,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights = []):
+def traj_wrapper(theta,timeBins,N,h,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,gens,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights = []):
 	S = theta
 	Sprime = np.concatenate((S,[0.0]))
 
@@ -216,13 +217,13 @@ def traj_wrapper(theta,timeBins,N,freqs,times,logfreqs,log1minusfreqs,z_bins,z_l
 		M = tShape[2]
 		loglrs = np.zeros(M)
 		postBySamples = np.zeros((F,T-1,M))
-		tranmatrix = _nstep_log_trans_prob(N[0],sel[0],freqs,z_bins,z_logcdf,z_logsf) # this only handles the precompute case, just use initial values
+		tranmatrix = _nstep_log_trans_prob(N[0],sel[0],freqs,z_bins,z_logcdf,z_logsf,h) # this only handles the precompute case, just use initial values
 		precompute = 0
 		if len(np.unique(N)) + len(np.unique(sel)) == 2:
 			precompute = 1
 		for i in range(M):
-			betaMat = backward_algorithm(sel,times[:,:,i],derSampledTimes,ancSampledTimes,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,tranmatrix,noCoals=noCoals,precomputematrixboolean=precompute,currFreq=currFreq)
-			alphaMat = forward_algorithm(sel,times[:,:,i],derSampledTimes,ancSampledTimes,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals)
+			betaMat = backward_algorithm(sel,times[:,:,i],derSampledTimes,ancSampledTimes,epochs,N,h,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,tranmatrix,noCoals=noCoals,precomputematrixboolean=precompute,currFreq=currFreq)
+			alphaMat = forward_algorithm(sel,times[:,:,i],derSampledTimes,ancSampledTimes,epochs,N,h,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals)
 			logl = logsumexp(betaMat[-2,:])
 			loglrs[i] = logl - Weights[i]
 			postBySamples[:,:,i] = (alphaMat[1:,:] + betaMat[:-1,:]).transpose()
@@ -231,8 +232,8 @@ def traj_wrapper(theta,timeBins,N,freqs,times,logfreqs,log1minusfreqs,z_bins,z_l
 
 	else:
 		post = np.zeros((F,T))
-		betaMat = backward_algorithm(sel,t,derSampledTimes,ancSampledTimes,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,np.zeros((F,F)),noCoals=noCoals,precomputematrixboolean=0,currFreq=currFreq)
-		alphaMat = forward_algorithm(sel,t,derSampledTimes,ancSampledTimes,epochs,N,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals)
+		betaMat = backward_algorithm(sel,t,derSampledTimes,ancSampledTimes,epochs,N,h,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,np.zeros((F,F)),noCoals=noCoals,precomputematrixboolean=0,currFreq=currFreq)
+		alphaMat = forward_algorithm(sel,t,derSampledTimes,ancSampledTimes,epochs,N,h,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancGLs,ancHapGLs,noCoals=noCoals)
 		post = (alphaMat[1:,:] + betaMat[:-1,:]).transpose()
 		post -= logsumexp(post,axis=0)
 	return post
@@ -289,7 +290,7 @@ if __name__ == "__main__":
 		os.remove(args.out+"_tempfile.txt")
 	functionvals = open(args.out+"_tempfile.txt", "a")
 	sMax = args.sMax
-	timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq,logfreqs,log1minusfreqs,derSampledTimes,ancSampledTimes = load_data(args)
+	timeBins,times,epochs,Ne,freqs,ancientGLs,ancientHapGLs,noCoals,currFreq,logfreqs,log1minusfreqs,derSampledTimes,ancSampledTimes,h = load_data(args)
 	# read in global Phi(z) lookups
 	linearspacing = np.linspace(0.0, 1.0, 2000)
 	linearspacing[0] = 1e-10
@@ -328,15 +329,16 @@ if __name__ == "__main__":
 		ImpSamp = True
 	if not ImpSamp: # to account for whether we return the likelihood or the log likelihood
 
-		logL0 = likelihood_wrapper(S0,timeBins,Ne,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals)
+		logL0 = likelihood_wrapper(S0,timeBins,Ne,h,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals)
 
-		minargs = (timeBins,Ne,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals)
+		minargs = (timeBins,Ne,h,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals)
 
 		if len(S0) == 1:
 			try:
 				res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [0.9,1.0,1.1],args=minargs, method = "Brent", tol = 1e-4))
 				S = [res.x - 1.0] # adjusted wrapper to work on selection + 1, so that tolerance makes more sense.
 				L = res.fun
+
 				if times.shape[1] < 31: # with small number of samples, result function can be multimodal, so do multiple optims and take best.
 					try:
 						res = (minimize_scalar(likelihood_wrapper_scalar, bracket = [1.0001,1.00011,1.02],args=minargs, method = "Brent", tol = 1e-4))
@@ -365,14 +367,14 @@ if __name__ == "__main__":
 		M = times.shape[2]
 		Weights = np.zeros(M)
 		precompute = 0
-		tranmatrix = _nstep_log_trans_prob(Ne[0],0.0,freqs,z_bins,z_logcdf,z_logsf) # this only handles the precompute case, just use initial values
+		tranmatrix = _nstep_log_trans_prob(Ne[0],0.0,freqs,z_bins,z_logcdf,z_logsf,h) # this only handles the precompute case, just use initial values
 		if len(np.unique(Ne)) == 1:
 			precompute = 1
 		for i in range(M):
-			betaMatl0 = backward_algorithm(np.zeros(len(Ne)),times[:,:,i],derSampledTimes,ancSampledTimes,epochs,Ne,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,tranmatrix,noCoals=noCoals,precomputematrixboolean=precompute,currFreq=currFreq)
+			betaMatl0 = backward_algorithm(np.zeros(len(Ne)),times[:,:,i],derSampledTimes,ancSampledTimes,epochs,Ne,h,freqs,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,tranmatrix,noCoals=noCoals,precomputematrixboolean=precompute,currFreq=currFreq)
 			Weights[i] = logsumexp(betaMatl0[-2,:])
 
-		minargs = (timeBins,Ne,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals,Weights)
+		minargs = (timeBins,Ne,h,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,functionvals,Weights)
 
 		if len(S0) == 1:
 			try:
@@ -404,7 +406,7 @@ if __name__ == "__main__":
 	FirstLine = "logLR" + "\t" + "-log10(p-value)"
 	epochnum = 1
 	degreesoffreedom = len(S)
-	
+
 	toprint = toprint + "\t" + '%.2f'%(-(chi2.logsf(numericloglik + numericloglik, degreesoffreedom ) ) / np.log(10) )
 	for s,t,u in zip(S,timeBins[:-1],timeBins[1:]):
 		toprint = toprint + "\t" + '%d'%(t)
@@ -491,9 +493,9 @@ if __name__ == "__main__":
 				variatess = multivariate_normal.rvs(mean=muu, cov=covarmat, size = args.integration_points)
 
 		# infer trajectory @ MLE of selection parameter
-		post = np.exp(traj_wrapper(variatess[0],timeBins,Ne,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
+		post = np.exp(traj_wrapper(variatess[0],timeBins,Ne,h,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
 		for v in range(1,len(variatess)):
-			post = post + np.exp(traj_wrapper(variatess[v],timeBins,Ne,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
+			post = post + np.exp(traj_wrapper(variatess[v],timeBins,Ne,h,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
 		post = post / np.sum(post,axis=0)
 		np.savetxt(args.out+"_freqs.txt", freqs, delimiter=",")
 		np.savetxt(args.out+"_post.txt", post, delimiter=",")
