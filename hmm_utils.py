@@ -122,6 +122,8 @@ def _log_coal_density(times,n,epoch,xi,Ni,anc=0):
         xi = 1.0-xi
     k=n
     xiNi = xi*Ni
+    if xiNi == 0.0: # if in other state, impossible for others to still be segregating
+        return(-1e20)
     for i,t in enumerate(times):
         k = n-i
         kchoose2 = k*(k-1)/4
@@ -133,7 +135,6 @@ def _log_coal_density(times,n,epoch,xi,Ni,anc=0):
         k -= 1
     kchoose2 = k*(k-1)/4
     logPk = - kchoose2 * 1/xiNi*(epoch[1]-prevt) # this is the survival function of the exponential. survival is exp(-log*x). chance of no further coalescences.
-
     logp += logPk
     return logp
 
@@ -338,7 +339,6 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,h,freq
                         upperbound = upperbound + 1
                 upperindex[ii] = upperbound
                 lowerindex[ii] = lowerbound
-
         #grab ancient GL rows
         ancientGLrows = ancientGLs[ancientGLs[:,0] > cumGens]
         ancientGLrows = ancientGLrows[ancientGLrows[:,0] <= cumGens + 1.0]
@@ -394,7 +394,6 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,h,freq
                             coalEmissions[j] = _log_coal_density(ancCoals,nAncRemaining+1,epoch,freqs[j],Nt,anc=1) # run with 2 ancestral lineages
                     else:
                         print("Incorrect Polarization of Alleles!")
-            
             numberofsampledder = derSampledTimes
             numberofsampledder = numberofsampledder[numberofsampledder > cumGens]
 
