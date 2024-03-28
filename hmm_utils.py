@@ -122,6 +122,8 @@ def _log_coal_density(times,n,epoch,xi,Ni,anc=0):
         xi = 1.0-xi
     k=n
     xiNi = xi*Ni
+    if xiNi == 0.0: # if in other state, impossible for others to still be segregating
+        return(-1e20)
     for i,t in enumerate(times):
         k = n-i
         kchoose2 = k*(k-1)/4
@@ -133,7 +135,6 @@ def _log_coal_density(times,n,epoch,xi,Ni,anc=0):
         k -= 1
     kchoose2 = k*(k-1)/4
     logPk = - kchoose2 * 1/xiNi*(epoch[1]-prevt) # this is the survival function of the exponential. survival is exp(-log*x). chance of no further coalescences.
-
     logp += logPk
     return logp
 
@@ -338,7 +339,6 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,h,freq
                         upperbound = upperbound + 1
                 upperindex[ii] = upperbound
                 lowerindex[ii] = lowerbound
-
         #grab ancient GL rows
         ancientGLrows = ancientGLs[ancientGLs[:,0] > cumGens]
         ancientGLrows = ancientGLrows[ancientGLrows[:,0] <= cumGens + 1.0]
@@ -394,7 +394,6 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,h,freq
                             coalEmissions[j] = _log_coal_density(ancCoals,nAncRemaining+1,epoch,freqs[j],Nt,anc=1) # run with 2 ancestral lineages
                     else:
                         print("Incorrect Polarization of Alleles!")
-            
             numberofsampledder = derSampledTimes
             numberofsampledder = numberofsampledder[numberofsampledder > cumGens]
 
@@ -406,63 +405,62 @@ def backward_algorithm(sel,times,derSampledTimes,ancSampledTimes,epochs,N,h,freq
 
             nDerRemaining += len(numberofsampledder[numberofsampledder <= cumGens + 1.0])
             nAncRemaining += len(numberofsampledanc[numberofsampledanc <= cumGens + 1.0])
-        
-        maxloc = np.argmax(prevAlpha)
-        previouscolumn = np.exp(prevAlpha - prevAlpha[maxloc])
-        prevsumtarget = np.sum(previouscolumn) * 0.999
-        runningsum = previouscolumn[maxloc]
-        currlower = maxloc - 1
-        currhigher = maxloc + 1
-        while (runningsum < prevsumtarget):
-            if currhigher > lf - 1:
-                runningsum = runningsum + previouscolumn[currlower]
-                currlower = currlower - 1
-            elif currlower < 0:
-                runningsum = runningsum + previouscolumn[currhigher]
-                currhigher = currhigher + 1
-            else:
-                lowerpossible =  previouscolumn[currlower]
-                upperpossible =  previouscolumn[currhigher]
-                if lowerpossible < upperpossible:
+        if h > 0.4 and h < 0.6:
+            maxloc = np.argmax(prevAlpha)
+            previouscolumn = np.exp(prevAlpha - prevAlpha[maxloc])
+            prevsumtarget = np.sum(previouscolumn) * 0.999
+            runningsum = previouscolumn[maxloc]
+            currlower = maxloc - 1
+            currhigher = maxloc + 1
+            while (runningsum < prevsumtarget):
+                if currhigher > lf - 1:
+                    runningsum = runningsum + previouscolumn[currlower]
+                    currlower = currlower - 1
+                elif currlower < 0:
                     runningsum = runningsum + previouscolumn[currhigher]
                     currhigher = currhigher + 1
                 else:
-                    runningsum = runningsum + previouscolumn[currlower]
-                    currlower = currlower - 1
-        if currlower < 0:
-            currlower = currlower + 1
-        if currhigher > lf -1:
-            currhigher = currhigher - 1
-        lowerbounddd = 0
-        upperbounddd = lf
-        if freqs[currhigher] - freqs[currlower] < 0.33:
-            indexofcurrent = -1
-            maxdistance = 100.0
-            target =  freqs[currlower]  - 0.04 - 2*freqs[currhigher]  + 2*freqs[currlower]
-            for i in range(lf):
-                distt = abs(freqs[i] - target) 
-                if distt < maxdistance:
-                    maxdistance = distt
-                    indexofcurrent = i
-            lowerbounddd = indexofcurrent
+                    lowerpossible =  previouscolumn[currlower]
+                    upperpossible =  previouscolumn[currhigher]
+                    if lowerpossible < upperpossible:
+                        runningsum = runningsum + previouscolumn[currhigher]
+                        currhigher = currhigher + 1
+                    else:
+                        runningsum = runningsum + previouscolumn[currlower]
+                        currlower = currlower - 1
+            if currlower < 0:
+                currlower = currlower + 1
+            if currhigher > lf -1:
+                currhigher = currhigher - 1
+            lowerbounddd = 0
+            upperbounddd = lf
+            if freqs[currhigher] - freqs[currlower] < 0.33:
+                indexofcurrent = -1
+                maxdistance = 100.0
+                target =  freqs[currlower]  - 0.1 - 2*freqs[currhigher]  + 2*freqs[currlower]
+                for i in range(lf):
+                    distt = abs(freqs[i] - target) 
+                    if distt < maxdistance:
+                        maxdistance = distt
+                        indexofcurrent = i
+                lowerbounddd = indexofcurrent
 
-            indexofcurrent = -1
-            maxdistance = 100.0
-            target =  freqs[currhigher] + 0.04 + 2*freqs[currhigher] -  2*freqs[currlower]
-            for i in range(lf):
-                distt = abs(freqs[i] - target)
-                if distt < maxdistance:
-                    maxdistance = distt
-                    indexofcurrent = i
-            upperbounddd = indexofcurrent
-            upperbounddd = upperbounddd + 1
+                indexofcurrent = -1
+                maxdistance = 100.0
+                target =  freqs[currhigher] + 0.1 + 2*freqs[currhigher] -  2*freqs[currlower]
+                for i in range(lf):
+                    distt = abs(freqs[i] - target)
+                    if distt < maxdistance:
+                        maxdistance = distt
+                        indexofcurrent = i
+                upperbounddd = indexofcurrent
+                upperbounddd = upperbounddd + 1
 
-        #upperbounddd = round(min(lf, currhigher + lf/20.0))  #Approximation 3. Set this to lf and next line to 0 to turn off the beam search.
-        #lowerbounddd = round(max(0, currlower - lf/20.0))
-        #print("bounds", tb, lowerbounddd, upperbounddd )
-        if nDerRemaining == 1:
-            lowerbounddd = min(lowerbounddd, 0)
-
+            if nDerRemaining == 1:
+                lowerbounddd = min(lowerbounddd, 0)
+        else:
+            lowerbounddd = 0
+            upperbounddd = lf
         ####################################
         for i in range(lowerbounddd,upperbounddd):
             alpha[i] = _logsumexp(prevAlpha[lowerindex[i]:upperindex[i]] + currTrans[lowerindex[i]:upperindex[i],i]) + glEmissions[i] + coalEmissions[i]
