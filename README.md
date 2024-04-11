@@ -108,7 +108,12 @@ $ python PATH/inference.py
 
 **--out** The prefix of the output files.
 
-**--noAlleleTraj** If this flag is used, the inferred allele trajectories will not be estimated. This saves some computational time as we do not need to run the backward algorithm. Only the inference file will be produced, not the freqs or post files.
+**--noAlleleTraj** If this flag is used, the inferred allele trajectories will not be estimated. This saves considerable computational time as we do not need to run the Monte Carlo integration and the backward algorithm. Only the inference file will be produced, not the freqs or post files.
+
+**--integration_points**  The number of samples that are used in the  Monte Carlo integration to generate the inferred allele trajectory.  A higher number will result in less variance in the estimate due to finite sampling but at increased computational cost.  Default value is 10 * (number of selection coefficients that are estimated). Ex. 10 if no argument is supplied to --timeBins and 30 if  --timeBins 200 300 is used.
+
+**--h**  Dominance coefficient to be used. Relative fitnesses of ancestral allele homozygotes, heterozygotes, and derived allele homozygotes is 1, 1 + hs, 1 + s. Default value is h=0.5, corresponding to additive selection.
+
 
 ## This step will produce (in the current working directory)
 
