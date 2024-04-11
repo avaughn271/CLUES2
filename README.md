@@ -27,9 +27,9 @@ https://biopython.org/wiki/Download
 
 https://pandas.pydata.org/docs/getting_started/install.html
 
-## Running CLUES
+## Running CLUES2
 
-CLUES has 3 steps:
+CLUES2 has 3 steps:
 
 ## (1) Obtain Input Files
 
