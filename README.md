@@ -33,7 +33,10 @@ CLUES2 has 3 steps:
 
 ## (1) Obtain Input Files
 
-The user will need to process their input data to generate a sample of ancient genotypes and/or a set of samples of coalescence times. If you wish to use Relate to infer ARGs, we provide a script (RelateToCLUES.py) to convert the output of Relate importance sampling for the marginal tree at a given SNP. Please see the documentation of Relate (https://myersgroup.github.io/relate/) [[Speidel, *et al.* Nat. Gen. 2019]](https://www.nature.com/articles/s41588-019-0484-x), specifically the "Sample branch lengths" functionality. Use option "--format n" and set "--first_bp" and "--last_bp" to both be equal to the basepair position of your SNP of interest. We provide a script "RelateToCLUES.py" to convert the output file of this step to the input for CLUES2.
+The user will need to process their input data to generate a sample of ancient genotypes and/or a set of samples of coalescence times. We offer conversion scripts from 2 ARG-inference methods: Relate and SINGER.
+
+## Relate
+If you wish to use Relate to infer ARGs, we provide a script (RelateToCLUES.py) to convert the output of Relate importance sampling for the marginal tree at a given SNP. Please see the documentation of Relate (https://myersgroup.github.io/relate/) [[Speidel, *et al.* Nat. Gen. 2019]](https://www.nature.com/articles/s41588-019-0484-x), specifically the "Sample branch lengths" functionality. Use option "--format n" and set "--first_bp" and "--last_bp" to both be equal to the basepair position of your SNP of interest. We provide a script "RelateToCLUES.py" to convert the output file of this step to the input for CLUES2.
 
 ```bash
 $ python PATH/RelateToCLUES.py
@@ -54,8 +57,7 @@ $ python PATH/RelateToCLUES.py
 The script will also flip the allelic states of the minimum number of leaf nodes as necessary in order to enforce the infinite sites assumption. If no flips are necessary, the message "Infinite sites assumption satisfied. No allele flips necessary." will be printed. Otherwise, we will print the number of total flips we are making and the exact indices of the leaves we are flipping. If allele flips are necessary, we will also produce a file ***out*** **_derived.txt** which will be equivalent to the **--DerivedFile** input file, but with the alleles changed according to the necessary allele flips. If ancient data is used, we also print the number of ancient haplotypes we find with the derived and ancestral alleles.
 
 
-
-
+## SINGER
 
 CLUES2 can also process the output of SINGER. We provide a script "SingerToCLUES.py" to convert the output of SINGER to the input for CLUES2.
 
@@ -75,9 +77,10 @@ $ python PATH/SingerToCLUES.py
 
 ***output*** **_times.txt** A file resembling the input file for derived and ancestral coalescent times described above.
 
+
 ## (2) Run Inference
 
-In this step, we run the main CLUES program
+In this step, we run the main CLUES2 program
 
 ```bash
 $ python PATH/inference.py
@@ -85,9 +88,11 @@ $ python PATH/inference.py
 
 ## This step takes as input:
 
-**--times** The input file of coalescent times as described above. You can supply a **--times** file, a **--ancientSamps** file, or both. The times in this file, as with all times in CLUES2, should be measured in generations.
+**--times** The input file of coalescent times as described above.  You can supply any combination of a **--times** file, an **--ancientSamps** file, and/or an **--ancientHaps** file.   The times in this file, as with all times in CLUES2, should be measured in generations.
 
-**--ancientSamps** The input file of ancient genotype proabilities as described above. You can supply a **--times** file, or an **--ancientSamps** file, or both. The times in this file, as with all times in CLUES2, should be measured in generations.
+**--ancientSamps** The input file of ancient genotype proabilities as described below. You can supply any combination of a **--times** file, an **--ancientSamps** file, and/or an **--ancientHaps** file. The times in this file, as with all times in CLUES2, should be measured in generations.
+
+**--ancientHaps** The input file of ancient haplotype proabilities as described below. You can supply any combination of a **--times** file, an **--ancientSamps** file, and/or an **--ancientHaps** file. The times in this file, as with all times in CLUES2, should be measured in generations.
 
 **--popFreq** The modern derived allele frequency.
 
