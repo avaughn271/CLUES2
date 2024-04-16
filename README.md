@@ -220,7 +220,7 @@ Ancient Haplotype Samples: These input files look like the following file. The f
 16.45 0.0e+00 -inf
 190.05 -2.30258509299 -0.10536051565
 ...
-500.0 0.0 -inf -inf
+500.0 0.0 -inf
 ```
 
 
