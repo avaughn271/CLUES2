@@ -33,7 +33,7 @@ CLUES2 has 3 steps:
 
 ## (1) Obtain Input Files
 
-The user will need to process their input data to generate a sample of ancient genotypes and/or a set of samples of coalescence times. The user will need to process ancient genotype samples on their own, but we do  offer conversion scripts from 2 ARG-inference methods: Relate and SINGER. We here briefly describe how to run these conversion scripts, and we include a full description of the input file formats in the ``Input File Details" section at the end of this page.
+The user will need to process their input data to generate a sample of ancient genotypes and/or a set of samples of coalescence times. The user will need to process ancient genotype samples on their own, but we do  offer conversion scripts from 2 ARG-inference methods: Relate and SINGER. We here briefly describe how to run these conversion scripts, and we include a full description of the input file formats in the "Input File Details" section at the end of this page.
 
 ## Relate
 If you wish to use Relate to infer ARGs, we provide a script (RelateToCLUES.py) to convert the output of Relate importance sampling for the marginal tree at a given SNP. Please see the documentation of Relate (https://myersgroup.github.io/relate/) [[Speidel, *et al.* Nat. Gen. 2019]](https://www.nature.com/articles/s41588-019-0484-x), specifically the "Sample branch lengths" functionality. Use option "--format n" and set "--first_bp" and "--last_bp" to both be equal to the basepair position of your SNP of interest. We provide a script "RelateToCLUES.py" to convert the output file of this step to the input for CLUES2.
