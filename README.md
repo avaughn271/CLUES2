@@ -164,9 +164,36 @@ $ python PATH/plot_traj.py
 
 ***figure.png***  A figure representing a heatmap of the posterior density of the derived allele frequency. For each generation and each number $x$ in the **--posterior_intervals** list, we plot the interval of frequency bins of minimum width that contains at least $x%$ of the posterior probability. Conceptually, this can be thought of as plotting a set of concentric confidence intervals at each generation. If **--generation_time**  is supplied, then time is converted from generations to years using this conversion factor. Otherwise, time will be plotted in generations.
 
-### Example Commands
+## Example Commands
 
-A shell script containing example commands for CLUES2 can be found at example.sh in the example folder. Also contained within this folder are some example input files to the different steps of CLUES2. (The contents of this folder, as well as the possible arguments for CLUES2, might change substantially as CLUES2 undergoes revisions and as we receive documentation comments from users. We will try to keep it as updated as possible.) When all simulation studies and real data analysis have been finalized, all scripts used to generate and process this data will be added to this GitHub as well.
+We provide 2 example sets of commands for running CLUES2, along with sample input files, in the "examples" folder. 
+
+1. The file AncientHaplotypes, which reproduces the ancient haplotypes analysis of the SLC45A2 locus in the ANA subpopulation, as found in the manuscript:
+```bash
+python PATHTOCLUES/inference.py --coal example.coal --popFreq  0.98  --ancientHaps  example_haplotypes.csv --out ANA_SLC_output --tCutoff 536 --df 600 --timeBins 89 179
+python PATHTOCLUES/plot_traj.py --freqs  ANA_SLC_output_freqs.txt --post ANA_SLC_output_post.txt --figure ANA_SLC_figure  --generation_time 28.0
+```
+With the first command we run the inference method on the file of ancient haplotypes "example_haplotypes.csv", using coalescence rates as defined by the "example.coal" file. We set "--timeBins 89 179", which means we will infer 3 distinct selection coefficients. With the second command, we plot the inferred derived allele trajectory, assuming a generation time of 28 years per generation.
+
+2. The file ImportanceSampling, which roughly reproduces the importance sampling of gene trees approach used in the pan-ancestry analysis of the MCM6 locus, as found in the manuscript (we say "roughly", because we reduce the number of importance samples used for illustrative purposes):
+
+```bash
+PATHTORELATE/scripts/SampleBranchLengths/SampleBranchLengths.sh  --mu 1.25e-8 \
+                 -i chrom2 \
+                 -o  MCM6 \
+                 --coal example.coal
+                 --format n \
+                 --num_samples 200  \
+                 --first_bp  136608646 \
+                 --last_bp  136608646 \
+                 --distchr2.dist
+```
+
+python PATHTOCLUES/RelateToCLUES.py  --RelateSamples MCM6.newick  --DerivedFile 136608646.txt --out MCM6
+
+python PATHTOCLUES/inference.py --N 30000  --popFreq 0.535 --times MCM6_times.txt  --out ALL_MCM6  --tCutoff 536 --df 600 --noAlleleTraj
+
+The first command is our call to the SampleBranchLengths function of Relate, which is used to obtain samples of gene trees at the locus of interest. The second command is where we convert the output of Relate into the input for CLUES2. We take in the output of Relate, along with a file (called  136608646.txt as  136,608,646 is the position of the MCM6 SNP of interest on chromosome 2) which lists which leaves are derived or ancestral. Our RelateToCLUES.py script finds that we need to "flip" 2 leaves (by this we mean changing the allelic state of these leaves) in order to satisfy the infinite sites assumption. Lastly, we run our inference script on the MCM6_times.txt file produced by the previous step. We set haploid Ne to be 30000 and turn on the flag "--noAlleleTraj". This does not produce the files necessary to plot the reconstructed allele frequency trajectory, but speeds up the inference step considerably.
 
 ## Input File Details
 
