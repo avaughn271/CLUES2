@@ -52,14 +52,14 @@ $ python PATH/RelateToCLUES.py
 
 ## This step will produce (in the current working directory)
 
-***out*** **_times.txt** A file resembling the input file for derived and ancestral coalescent times described above.
+***out*** **_times.txt** A file resembling the input file for derived and ancestral coalescent times, which can be used as input to CLUES2.
 
-The script will also flip the allelic states of the minimum number of leaf nodes as necessary in order to enforce the infinite sites assumption. If no flips are necessary, the message "Infinite sites assumption satisfied. No allele flips necessary." will be printed. Otherwise, we will print the number of total flips we are making and the exact indices of the leaves we are flipping. If allele flips are necessary, we will also produce a file ***out*** **_derived.txt** which will be equivalent to the **--DerivedFile** input file, but with the alleles changed according to the necessary allele flips. If ancient data is used, we also print the number of ancient haplotypes we find with the derived and ancestral alleles.
+The script will also flip the allelic states of the minimum number of leaf nodes as necessary in order to enforce the infinite sites assumption. If no flips are necessary, the message "Infinite sites assumption satisfied. No allele flips necessary." will be printed. Otherwise, we will print the number of total flips we are making and the exact indices of the leaves we are flipping. If allele flips are necessary, we will also produce a file ***out*** **_derived.txt** which will be equivalent to the **--DerivedFile** input file, but with the alleles changed according to the necessary allele flips. If ancient data is used, we also print the number of ancient haplotypes we find with the derived and ancestral alleles. It is always assumed that the youngest haplotype in the tree has age 0, which is to say that the tree represents a mixture of ancient and modern genomes.
 
 
 ## SINGER
 
-CLUES2 can also process the output of SINGER. We provide a script "SingerToCLUES.py" to convert the output of SINGER to the input for CLUES2.
+CLUES2 can also process the output of SINGER (https://github.com/popgenmethods/SINGER) [[Deng, Nielsen, and Song 2024 bioRxiv 2024]](https://www.biorxiv.org/content/10.1101/2024.03.16.585351v1). We provide a script "SingerToCLUES.py" to convert the output of SINGER to the input for CLUES2.
 
 ```bash
 $ python PATH/SingerToCLUES.py
