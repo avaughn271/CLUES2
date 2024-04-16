@@ -59,7 +59,7 @@ The script will also flip the allelic states of the minimum number of leaf nodes
 
 ## SINGER
 
-CLUES2 can also process the output of SINGER (https://github.com/popgenmethods/SINGER) [[Deng, Nielsen, and Song 2024 bioRxiv 2024]](https://www.biorxiv.org/content/10.1101/2024.03.16.585351v1). We provide a script "SingerToCLUES.py" to convert the output of SINGER to the input for CLUES2.
+CLUES2 can also process the output of SINGER (https://github.com/popgenmethods/SINGER) [[Deng, Nielsen, and Song bioRxiv 2024]](https://www.biorxiv.org/content/10.1101/2024.03.16.585351v1). We provide a script "SingerToCLUES.py" to convert the output of SINGER to the input for CLUES2.
 
 ```bash
 $ python PATH/SingerToCLUES.py
