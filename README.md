@@ -75,7 +75,7 @@ $ python PATH/SingerToCLUES.py
 
 ## This step will produce (in the current working directory)
 
-***output*** **_times.txt** A file resembling the input file for derived and ancestral coalescent times described above.
+***output*** **_times.txt**  A file resembling the input file for derived and ancestral coalescent times, which can be used as input to CLUES2.
 
 
 ## (2) Run Inference
@@ -88,7 +88,7 @@ $ python PATH/inference.py
 
 ## This step takes as input:
 
-**--times** The input file of coalescent times as described above.  You can supply any combination of a **--times** file, an **--ancientSamps** file, and/or an **--ancientHaps** file.   The times in this file, as with all times in CLUES2, should be measured in generations.
+**--times** The input file of coalescent times as produced, for example, by the above scripts.  You can supply any combination of a **--times** file, an **--ancientSamps** file, and/or an **--ancientHaps** file.   The times in this file, as with all times in CLUES2, should be measured in generations.
 
 **--ancientSamps** The input file of ancient genotype proabilities as described below. You can supply any combination of a **--times** file, an **--ancientSamps** file, and/or an **--ancientHaps** file. The times in this file, as with all times in CLUES2, should be measured in generations.
 
@@ -108,11 +108,11 @@ $ python PATH/inference.py
 
 **--out** The prefix of the output files.
 
-**--noAlleleTraj** If this flag is used, the inferred allele trajectories will not be estimated. This saves considerable computational time as we do not need to run the Monte Carlo integration and the backward algorithm. Only the inference file will be produced, not the freqs or post files.
+**--noAlleleTraj** If this flag is used, the inferred allele trajectory will not be estimated. This saves considerable computational time as we do not need to run the Monte Carlo integration and the backward algorithm. Only the inference file will be produced, not the freqs or post files.
 
-**--integration_points**  The number of samples that are used in the  Monte Carlo integration to generate the inferred allele trajectory.  A higher number will result in less variance in the estimate due to finite sampling but at increased computational cost.  Default value is 10 * (number of selection coefficients that are estimated). Ex. 10 if no argument is supplied to --timeBins and 30 if  --timeBins 200 300 is used.
+**--integration_points**  The number of samples that are used in the  Monte Carlo integration to generate the inferred allele trajectory.  A higher number will result in less variance in the estimate due to finite sampling but at increased computational cost.  Default value is 10 * (number of selection coefficients that are estimated). Example: 10 if no argument is supplied to --timeBins and 30 if  --timeBins 200 300 is used.
 
-**--h**  Dominance coefficient to be used. Relative fitnesses of ancestral allele homozygotes, heterozygotes, and derived allele homozygotes is 1, 1 + hs, 1 + s. Default value is h=0.5, corresponding to additive selection.
+**--h**  Dominance coefficient to be used. The relative fitnesses of ancestral allele homozygotes, heterozygotes, and derived allele homozygotes is 1, 1 + hs, 1 + s. Default value is h=0.5, corresponding to additive selection. h is assumed to have the same value through all epochs.
 
 
 ## This step will produce (in the current working directory)
@@ -133,7 +133,7 @@ where selection MLEs are listed to the immediate right of the epoch start and en
 
 ***out_freqs.txt*** A file containing **df** lines, with each representing one of the discretized allele frequency bins. Not produced if the **--noAlleleTraj**  flag is used.
 
-***out_post.txt*** A file containing **df** lines, with each representing one containing **tCutoff** comma separated probabilities. The j'th column of the i'th row contains the probability of the derived allele being at frequency freqs[i] at j generations before the present, where freqs represent the frequencies given by the ***out_freqs.txt*** file.  Not produced if the **--noAlleleTraj**  flag is used. 
+***out_post.txt*** A file containing **df** lines, with each one containing **tCutoff** comma separated probabilities. The j'th column of the i'th row contains the probability of the derived allele being at frequency freqs[i] at j generations before the present, where freqs represent the frequencies given by the ***out_freqs.txt*** file.  Not produced if the **--noAlleleTraj**  flag is used. 
 
 ## (3) Plot Inferred Derived Allele Trajectory.
 
@@ -157,14 +157,13 @@ $ python PATH/plot_traj.py
 
 ***figure.png***  A figure representing a heatmap of the posterior density of the derived allele frequency. For each generation and each number $x$ in the **--posterior_intervals** list, we plot the interval of frequency bins of minimum width that contains at least $x%$ of the posterior probability. Conceptually, this can be thought of as plotting a set of concentric confidence intervals at each generation. If **--generation_time**  is supplied, then time is converted from generations to years using this conversion factor. Otherwise, time will be plotted in generations.
 
-
 ### Example Commands
 
 A shell script containing example commands for CLUES2 can be found at example.sh in the example folder. Also contained within this folder are some example input files to the different steps of CLUES2. (The contents of this folder, as well as the possible arguments for CLUES2, might change substantially as CLUES2 undergoes revisions and as we receive documentation comments from users. We will try to keep it as updated as possible.) When all simulation studies and real data analysis have been finalized, all scripts used to generate and process this data will be added to this GitHub as well.
 
 ## Input File Details
 
-CLUES2 has been tested on two different input files: posterior samples of ARGs and historic allele genotypes. We describe the input files here:
+CLUES2 has been tested on three different input files: posterior samples of ARGs, ancient genotype samples, and ancient haplotype samples. We describe the input files here:
 
 Times: These are the posterior samples of ARGs, more specifically the posterior samples of pairwise coalescence times at the specified SNP. We do not explicitly need the tree topology due to the exchangeability of lineages within the derived and ancestral classes. If you have $M$ samples from the posterior, this file will have $2M$ lines. If we iterate through the samples from  $m=0$ to $m=M-1$, the ($m+1$)'th line will be the coalescence times of derived lineages of the $m$'th sample. The ($m+2$)'th line will be the coalescence times of ancestral lineages of the $m$'th sample. For example, if we sample the following $M=3$ trees from the posterior:
 
@@ -202,7 +201,7 @@ The file Times would be
 
 You read this file into CLUES2 with the --times argument, as when using only modern data. CLUES2 then determines whether ancient samples are being used and correctly parses the input file into the appropriate tree structure.
 
-Samples: These input files look like the following file. The first column is the sampling times of the ancient samples (given in generations). The second column is the log genotype probability of 0/0 (homozygous ancestral). The third column is the log genotype probability of 0/1 (which is to say 1|0 or 0|1). The fourth column is the log genotype probability of 1/1 (homozygous derived). For example, the first row of the following file means that an individual was sampled 16.45 generations ago and we are 100% certain has a 0/0 genotype. The second row of the following file means that an individual was sampled 170.6 generations ago to which we assign a probability of 0.105 of being 0/0, a probability 0.878 of being 0/1, and a probability of 0.017 of being 1/1. Uncertainty in genotype calls of ancient data can be caused by imputation. The data should be sorted in increasing order by sampling time.
+Ancient Genotype Samples: These input files look like the following file. The first column is the sampling times of the ancient samples (given in generations). The second column is the log genotype probability of 0/0 (homozygous ancestral). The third column is the log genotype probability of 0/1 (which is to say 1|0 or 0|1). The fourth column is the log genotype probability of 1/1 (homozygous derived). For example, the first row of the following file means that an individual was sampled 16.45 generations ago and we are 100% certain has a 0/0 genotype. The second row of the following file means that an individual was sampled 170.6 generations ago to which we assign a probability of 0.105 of being 0/0, a probability 0.878 of being 0/1, and a probability of 0.017 of being 1/1. Uncertainty in genotype calls of ancient data can be caused by imputation. The data should be sorted in increasing order by sampling time.
 
 ```bash
 16.45 0.0e+00 -inf -inf
@@ -215,5 +214,13 @@ Samples: These input files look like the following file. The first column is the
 500.0 0.0 -inf -inf
 ```
 
+Ancient Haplotype Samples: These input files look like the following file. The first column is the sampling times of the ancient samples (given in generations). The second column is the log genotype probability of the ancestral allele. The third column is the log genotype probability of the derived allele. For example, the first row of the following file means that a haplotype was sampled 16.45 generations ago and we are 100% certain that the allele at the SNP of interest was ancestral. The second row of the following file means that an individual was sampled 190.05 generations ago to which we assign a probability of 0.1 of being ancestral and a probability 0.9 of being derived. Uncertainty in genotype calls of ancient data can be caused by imputation. The data should be sorted in increasing order by sampling time.
+
+```bash
+16.45 0.0e+00 -inf
+190.05 -2.30258509299 -0.10536051565
+...
+500.0 0.0 -inf -inf
+```
 
 
