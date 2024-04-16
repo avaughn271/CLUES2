@@ -187,11 +187,12 @@ PATHTORELATE/scripts/SampleBranchLengths/SampleBranchLengths.sh  --mu 1.25e-8 \
                  --first_bp  136608646 \
                  --last_bp  136608646 \
                  --distchr2.dist
-```
+
 
 python PATHTOCLUES/RelateToCLUES.py  --RelateSamples MCM6.newick  --DerivedFile 136608646.txt --out MCM6
 
 python PATHTOCLUES/inference.py --N 30000  --popFreq 0.535 --times MCM6_times.txt  --out ALL_MCM6  --tCutoff 536 --df 600 --noAlleleTraj
+```
 
 The first command is our call to the SampleBranchLengths function of Relate, which is used to obtain samples of gene trees at the locus of interest. The second command is where we convert the output of Relate into the input for CLUES2. We take in the output of Relate, along with a file (called  136608646.txt as  136,608,646 is the position of the MCM6 SNP of interest on chromosome 2) which lists which leaves are derived or ancestral. Our RelateToCLUES.py script finds that we need to "flip" 2 leaves (by this we mean changing the allelic state of these leaves) in order to satisfy the infinite sites assumption. Lastly, we run our inference script on the MCM6_times.txt file produced by the previous step. We set haploid Ne to be 30000 and turn on the flag "--noAlleleTraj". This does not produce the files necessary to plot the reconstructed allele frequency trajectory, but speeds up the inference step considerably.
 
