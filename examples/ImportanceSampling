@@ -1,0 +1,15 @@
+#Here, we assume you have the output files from running Relate: chrom2.anc, chrom2.mut, and chr2.dist
+
+PATHTORELATE/scripts/SampleBranchLengths/SampleBranchLengths.sh  --mu 1.25e-8 \
+                 -i chrom2 \
+                 -o  MCM6 \
+                 --coal example.coal
+                 --format n \
+                 --num_samples 200  \
+                 --first_bp  136608646 \
+                 --last_bp  136608646 \
+                 --distchr2.dist
+
+python PATHTOCLUES/RelateToCLUES.py  --RelateSamples MCM6.newick  --DerivedFile 136608646.txt --out MCM6
+
+python PATHTOCLUES/inference.py --N 30000  --popFreq 0.535 --times MCM6_times.txt  --out ALL_MCM6  --tCutoff 536 --df 600 --noAlleleTraj

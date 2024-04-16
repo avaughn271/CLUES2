@@ -1,0 +1,4 @@
+
+python PATHTOCLUES/inference.py --coal example.coal --popFreq  0.98  --ancientHaps  example_haplotypes.csv --out ANA_SLC_output --tCutoff 536 --df 600 --timeBins 89 179
+python PATHTOCLUES/plot_traj.py --freqs  ANA_SLC_output_freqs.txt --post ANA_SLC_output_post.txt --figure ANA_SLC_figure  --generation_time 28.0
+
