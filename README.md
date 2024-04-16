@@ -202,7 +202,7 @@ CLUES2 has been tested on three different input files: posterior samples of ARGs
 Times: These are the posterior samples of ARGs, more specifically the posterior samples of pairwise coalescence times at the specified SNP. We do not explicitly need the tree topology due to the exchangeability of lineages within the derived and ancestral classes. If you have $M$ samples from the posterior, this file will have $2M$ lines. If we iterate through the samples from  $m=0$ to $m=M-1$, the ($m+1$)'th line will be the coalescence times of derived lineages of the $m$'th sample. The ($m+2$)'th line will be the coalescence times of ancestral lineages of the $m$'th sample. For example, if we sample the following $M=3$ trees from the posterior:
 
 
-<img src="https://github.com/avaughn271/CLUES2/blob/main/example/clues1.png">
+<img src="https://github.com/avaughn271/CLUES2/blob/main/examples/clues1.png">
 
 The file Times would be:
 
@@ -218,7 +218,7 @@ We see that there is one entry for each coalescence event in the tree. A coalesc
 
 Ancient Times: CLUES2 can also be run on ARGs on ancient data. The input file format is the same as that given above, except for the addition of two lines at the beginning of the file that list the sampling times of the different lineages. In particular, the first line is a semicolon-separated line listing the nonzero sampling times of derived lineages (sampling times of ancient haplotypes only, modern haplotypes are not considered). The second line is a semicolon-separated line listing the nonzero sampling times of ancestral lineages (sampling times of ancient haplotypes only, modern haplotypes are not considered). The subsequent lines are the derived coalescence times of the first importance sample, the ancestral  coalescence times of the first importance sample, the derived coalescence times of the second importance sample, etc. as described above. For example, assume we have 2 modern ancestral lineages, 1 ancestral lineage sampled at time 60, 1 modern derived lineage, and 2 derived lineages sampled at times 40 and 50 respectively. If we sample the following 3 trees (where the parentheses in each leaf node represent the sampling times):
 
-<img src="https://github.com/avaughn271/CLUES2/blob/main/example/cluesancient1.png">
+<img src="https://github.com/avaughn271/CLUES2/blob/main/examples/cluesancient1.png">
 
 The file Times would be
 
