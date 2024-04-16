@@ -28,7 +28,7 @@ https://biopython.org/wiki/Download
 https://pandas.pydata.org/docs/getting_started/install.html
 
 ## Important Notes About Parameterization
-Some things just go together, like peanut butter and jelly, peas and carrots, or population genetics and errors caused by a misplaced factor of 2. In an attempt to avoid any possible confusion by users, I want to clarify 2 possible points about the parameterizations used in CLUES2.
+Population genetics is full of errors and headaches caused by a misplaced factor of 2. In an attempt to avoid any possible confusion by users, I want to clarify 2 possible points about the parameterizations used in CLUES2.
 
 1. We parameterize selection in diploids by setting the relative fitnesses of the 3 genotypes to be 1, 1+hs, and 1+s (h=0.5 by default). This is in concordance with the simulation softwares SLiM and msprime but is different from  the parameterizations of 1, 1+s, 1+2s or  1, 1+s, (1+s)<sup>2</sup> that are often used. This is also different from the parameterization used in the original CLUES method, so do not expect the results to be the same. When analyzing inferred selection coefficients or comparing the results of CLUES2 with other methods, please take note of the parameterizations used and adjust if necessary.
 
