@@ -1,0 +1,10 @@
+tcutofff=536
+
+chr=2
+gene="MCM6"
+baseposition=136608646
+derivedfreq=0.535
+
+time python3.10 ~/desktop/CLUES2/inference.py --coal  Chr21Inferred.coal --popFreq  ${derivedfreq} --times  ${gene}_times.txt  --out ${gene}  --tCutoff ${tcutofff} --df 600  --h 7.64286
+
+python3.10 ~/desktop/CLUES2/plot_traj.py --freqs  ${gene}_freqs.txt --post ${gene}_post.txt --figure ${gene}  --generation_time 28.0

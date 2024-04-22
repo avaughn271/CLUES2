@@ -1,0 +1,2 @@
+logLR	-log10(p-value)	Epoch1_start	Epoch1_end	SelectionMLE1
+4.6987	2.66	0	403	0.02708
