@@ -1,0 +1,28 @@
+#unzip the dist file in each folder
+
+chr=2
+gene="MCM6"
+baseposition=136608646
+derivedfreq=0.535
+
+numsampss=2000
+tcutofff=536
+
+../relatemac/scripts/SampleBranchLengths/SampleBranchLengths.sh  --mu 1.25e-8 \
+                 -i ${chr}output \
+                 -o  ${gene} \
+                 --coal ../Chr21Inferred.coal \
+                 --format n \
+                 --num_samples  ${numsampss} \
+                 --first_bp  $baseposition \
+                 --last_bp  $baseposition \
+                 --dist example_input${chr}.dist \
+                 --seed 12
+
+python3.9 ~/desktop/CLUES2/RelateToCLUES.py  --RelateSamples ${gene}.newick  --DerivedFile ${baseposition}.txt --out ${gene}
+
+python3.10 ~/desktop/CLUES2/inference.py --coal ../Chr21Inferred.coal --popFreq  ${derivedfreq} --times  ${gene}_times.txt  --out ${gene}  --tCutoff ${tcutofff} --df 600 --noAlleleTraj
+
+head ${gene}_inference.txt
+
+python3.10 ~/desktop/CLUES2/EmbeddedCI.py --freqs  ${gene}_freqs.txt --post ${gene}_post.txt --figure ${gene}  --generation_time 28.0

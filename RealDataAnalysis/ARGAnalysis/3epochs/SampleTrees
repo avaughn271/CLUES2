@@ -1,0 +1,41 @@
+tcutofff=536
+
+chr=2
+gene="MCM6"
+baseposition=136608646
+derivedfreq=0.535
+
+time python3.10 ~/desktop/CLUES2/inference.py --coal ../Chr21Inferred.coal --popFreq  ${derivedfreq} --times  ../${gene}_${chr}/${gene}_times.txt  --out ${gene}  --tCutoff ${tcutofff} --df 600  --timeBins  89 179 --noAlleleTraj
+python3.10 ~/desktop/CLUES2/EmbeddedCI.py --freqs  ${gene}_freqs.txt --post ${gene}_post.txt --figure ${gene}  --generation_time 28.0
+
+chr=5
+gene="SLC45A2"
+baseposition=33948589
+derivedfreq=0.93
+
+time python3.10 ~/desktop/CLUES2/inference.py --coal ../Chr21Inferred.coal --popFreq  ${derivedfreq} --times  ../${gene}_${chr}/${gene}_times.txt  --out ${gene}  --tCutoff ${tcutofff} --df 600  --timeBins  89 179  --noAlleleTraj
+python3.10 ~/desktop/CLUES2/EmbeddedCI.py --freqs  ${gene}_freqs.txt --post ${gene}_post.txt --figure ${gene}  --generation_time 28.0
+
+chr=6
+gene="HLA"
+baseposition=32074804
+derivedfreq=0.125
+
+time python3.10 ~/desktop/CLUES2/inference.py --coal ../Chr21Inferred.coal --popFreq  ${derivedfreq} --times   ../${gene}_${chr}/${gene}_times.txt --out ${gene}  --tCutoff ${tcutofff} --df 600   --timeBins  89 179  --noAlleleTraj
+python3.10 ~/desktop/CLUES2/EmbeddedCI.py --freqs  ${gene}_freqs.txt --post ${gene}_post.txt --figure ${gene}  --generation_time 28.0
+
+chr=11
+gene="FADS2"
+baseposition=47266471
+derivedfreq=0.15
+
+time python3.10 ~/desktop/CLUES2/inference.py --coal ../Chr21Inferred.coal --popFreq  ${derivedfreq} --times  ../${gene}_${chr}/${gene}_times.txt  --out ${gene}  --tCutoff ${tcutofff} --df 600  --timeBins  89 179  --noAlleleTraj
+python3.10 ~/desktop/CLUES2/EmbeddedCI.py --freqs  ${gene}_freqs.txt --post ${gene}_post.txt --figure ${gene}  --generation_time 28.0
+
+chr=16
+gene="FTO"
+baseposition=53820527
+derivedfreq=0.65
+
+time python3.10 ~/desktop/CLUES2/inference.py --coal ../Chr21Inferred.coal --popFreq  ${derivedfreq} --times  ../${gene}_${chr}/${gene}_times.txt  --out ${gene}  --tCutoff ${tcutofff} --df 600  --timeBins  89 179 
+python3.10 ~/desktop/CLUES2/EmbeddedCI.py --freqs  ${gene}_freqs.txt --post ${gene}_post.txt --figure ${gene}  --generation_time 28.0

@@ -1,0 +1,2 @@
+snp;pos_of_snp;dist;rs-id;tree_index;branch_indices;is_not_mapping;is_flipped;age_begin;age_end;ancestral_allele/alternative_allele;
+613966;136608646;101;.;0;1045;0;0;3307.5;4676.63;G/A;

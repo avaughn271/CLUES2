@@ -1,0 +1,5 @@
+c=6
+beginn=32074801
+endd=32074807
+
+vcftools --gzvcf  ${c}.neo_impute_ph.vcf.gz --recode --recode-INFO-all --out AllIndivs${c} --from-bp $beginn --to-bp $endd --chr $c

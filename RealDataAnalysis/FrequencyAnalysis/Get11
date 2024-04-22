@@ -1,0 +1,7 @@
+c=11
+beginn=47266468
+endd=47266475
+
+vcftools --gzvcf  ${c}.neo_impute_ph.vcf.gz --recode --recode-INFO-all --out AllIndivs${c} --from-bp $beginn --to-bp $endd --chr $c
+
+##true chromosome position is: 47266471

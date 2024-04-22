@@ -1,0 +1,36 @@
+tcutofff=536
+
+chr=2
+gene="MCM6"
+derivedfreq=0.47
+
+time python3.10 ~/desktop/CLUES2/inference.py    --coal ../Chr21Inferred.coal --popFreq  ${derivedfreq} --ancientHaps  ../Haplotypes${chr}.csv  --out ${gene}  --tCutoff ${tcutofff} --df 600 --timeBins 89 179 --integration_points 30
+python3.10 ~/desktop/CLUES2/plot_traj.py --freqs  ${gene}_freqs.txt --post ${gene}_post.txt --figure ${gene}  --generation_time 28.0
+
+for group in 1 2 3 4
+do
+
+if [ $group == 1 ]; then
+  derivedfreq=0.01
+elif [ $group == 2 ]; then
+  derivedfreq=0.62
+elif [ $group == 3 ]; then
+  derivedfreq=0.27
+elif [ $group == 4 ]; then
+  derivedfreq=0.73
+else
+echo "problem"
+fi
+
+echo $derivedfreq
+
+time python3.10 ~/desktop/CLUES2/inference.py --coal ../Chr21Inferred.coal --popFreq ${derivedfreq} --ancientHaps  ../Haplotypes${chr}_group_${group}.csv  --out ${gene}_${group}  --tCutoff ${tcutofff} --df 600  --integration_points 30 --timeBins 89 179
+python3.10 ~/desktop/CLUES2/plot_traj.py --freqs  ${gene}_${group}_freqs.txt --post ${gene}_${group}_post.txt --figure ${gene}_${group}  --generation_time 28.0
+
+
+done
+
+
+#DERIVED ALLLEL FREQUENCIES???????
+
+#TIMEBINS

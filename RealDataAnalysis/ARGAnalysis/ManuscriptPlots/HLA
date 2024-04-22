@@ -1,0 +1,9 @@
+tcutofff=536
+
+chr=6
+gene="HLA"
+baseposition=32074804
+derivedfreq=0.125
+
+python3.10 ~/desktop/CLUES2/inference.py --coal ../Chr21Inferred.coal --popFreq  ${derivedfreq} --times  ../${gene}_${chr}/${gene}_times.txt  --out ${gene}  --tCutoff ${tcutofff} --df 600  --timeBins   179 
+python3.10 ~/desktop/CLUES2/plot_traj.py --freqs  ${gene}_freqs.txt --post ${gene}_post.txt --figure ${gene}  --generation_time 28.0
