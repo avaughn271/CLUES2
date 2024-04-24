@@ -76,7 +76,7 @@ $ python PATH/SingerToCLUES.py
 
 **--position** The genomic position of the mutation you wish to analyze in the SINGER trees.
 
-**--tree_path** The file prefix of the sampled SINGER trees, including file paths. For example, if the user inputs "singeroutput" to this argument, then the script will look for files named "singeroutput-0.trees",  "singeroutput-1.trees", "singeroutput-2.trees", etc. in the current working directory. If the user inputs "singerfolder/singeroutput" to this argument, then the script will look for files named "singeroutput-0.trees",  "singeroutput-1.trees", "singeroutput-2.trees", etc. in the directory "singerfolder".
+**--tree_path** The absolute path of the folder containing the sampled SINGER trees. For example, if the user inputs "singeroutput" to this argument, then the script will look for, and calculate coalescence times for,  all of the ".trees" files that are contained in the folder "singeroutput".
 
 **--output**  The prefix of the output file.
 
