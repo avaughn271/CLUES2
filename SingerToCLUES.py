@@ -12,6 +12,15 @@ TREEPATH = args.tree_path
 if os.path.exists(args.output + "_times.txt"):
   os.remove(args.output + "_times.txt")
 STRINGLIST = os.listdir(TREEPATH)
+boolean = [False] * len(STRINGLIST)
+
+for i in range(len(STRINGLIST)):
+    if len(STRINGLIST[i]) < 6:
+        boolean[i] = False
+    else:
+        l = len(STRINGLIST[i])
+        boolean[i] = ((STRINGLIST[i][(l - 6):]) == ".trees")
+STRINGLIST = (numpy.array(STRINGLIST)[boolean]).tolist()
 
 for k in STRINGLIST:
     POSITION = args.position
