@@ -1,7 +1,5 @@
 import numpy, argparse, tskit, os
 
-#POSITION = 5764
-
 """Define the Arguments"""
 parser = argparse.ArgumentParser()
 parser.add_argument('--position',type=int, default=None)
@@ -13,33 +11,12 @@ TREEPATH = args.tree_path
 
 if os.path.exists(args.output + "_times.txt"):
   os.remove(args.output + "_times.txt")
-
-if "/" not in TREEPATH:
-    FOLDERNAME = "."
-    arr = os.listdir(FOLDERNAME)
-    STRINGLIST = ["temp"] * len(arr)
-    for index in range(len(arr)):
-        if arr[index][0:(len(TREEPATH)+1)] == TREEPATH + "-":
-            STRINGLIST[index] = arr[index]
-    STRINGLIST = (numpy.array(STRINGLIST)[[numpy.where(numpy.not_equal(STRINGLIST , "temp"))[0]]])[0]
-else:
-    SPLITSTRING = TREEPATH.split("/")
-    FOLDERNAME = ""
-    for i in range(len(SPLITSTRING)-2):
-        FOLDERNAME = FOLDERNAME + SPLITSTRING[i] + "/"
-    FOLDERNAME = FOLDERNAME + SPLITSTRING[len(SPLITSTRING)-2]
-    TREEPATH = SPLITSTRING[-1]
-    arr = os.listdir(FOLDERNAME)
-    STRINGLIST = ["temp"] * len(arr)
-    for index in range(len(arr)):
-        if arr[index][0:(len(TREEPATH)+1)] == TREEPATH + "-":
-            STRINGLIST[index] = arr[index]
-    STRINGLIST = (numpy.array(STRINGLIST)[[numpy.where(numpy.not_equal(STRINGLIST , "temp"))[0]]])[0]
+STRINGLIST = os.listdir(TREEPATH)
 
 for k in STRINGLIST:
     POSITION = args.position
 
-    mts = tskit.load(FOLDERNAME + "/" + k)
+    mts = tskit.load(TREEPATH + "/" + k)
 
     firsttree = mts.first()
     numleaves = 0
@@ -56,9 +33,14 @@ for k in STRINGLIST:
             break
 
     for i in range(len(mts.tables.mutations)):
-        if mts.tables.mutations[i].site == SITE:
-            NODE = mts.tables.mutations[i].node  # node above which mutation occurred.
-            break
+        try:
+            if mts.tables.mutations[i].site == SITE:
+                NODE = mts.tables.mutations[i].node  # node above which mutation occurred.
+                break
+        except NameError:
+            print("No mutation found at that position")
+            exit()
+
     for i in mts.trees():
         if (i.interval.left <= POSITION and i.interval.right > POSITION):
             LOCALTREE = i
