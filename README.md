@@ -97,9 +97,9 @@ $ python PATH/inference.py
 
 **--times** The input file of coalescent times as produced, for example, by the above scripts.  You can supply any combination of a **--times** file, an **--ancientSamps** file, and/or an **--ancientHaps** file.   The times in this file, as with all times in CLUES2, should be measured in generations.
 
-**--ancientSamps** The input file of ancient genotype proabilities as described below. You can supply any combination of a **--times** file, an **--ancientSamps** file, and/or an **--ancientHaps** file. The times in this file, as with all times in CLUES2, should be measured in generations.
+**--ancientSamps** The input file of ancient genotype probabilities as described below. You can supply any combination of a **--times** file, an **--ancientSamps** file, and/or an **--ancientHaps** file. The times in this file, as with all times in CLUES2, should be measured in generations.
 
-**--ancientHaps** The input file of ancient haplotype proabilities as described below. You can supply any combination of a **--times** file, an **--ancientSamps** file, and/or an **--ancientHaps** file. The times in this file, as with all times in CLUES2, should be measured in generations.
+**--ancientHaps** The input file of ancient haplotype probabilities as described below. You can supply any combination of a **--times** file, an **--ancientSamps** file, and/or an **--ancientHaps** file. The times in this file, as with all times in CLUES2, should be measured in generations.
 
 **--popFreq** The modern derived allele frequency.
 
