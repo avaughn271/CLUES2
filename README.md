@@ -97,9 +97,9 @@ $ python PATH/inference.py
 
 **--times** The input file of coalescent times as produced, for example, by the above scripts.  You can supply any combination of a **--times** file, an **--ancientSamps** file, and/or an **--ancientHaps** file.   The times in this file, as with all times in CLUES2, should be measured in generations.
 
-**--ancientSamps** The input file of ancient genotype probabilities as described below. You can supply any combination of a **--times** file, an **--ancientSamps** file, and/or an **--ancientHaps** file. The times in this file, as with all times in CLUES2, should be measured in generations.
+**--ancientSamps** The input file of ancient genotype likelihoods as described below. You can supply any combination of a **--times** file, an **--ancientSamps** file, and/or an **--ancientHaps** file. The times in this file, as with all times in CLUES2, should be measured in generations.
 
-**--ancientHaps** The input file of ancient haplotype probabilities as described below. You can supply any combination of a **--times** file, an **--ancientSamps** file, and/or an **--ancientHaps** file. The times in this file, as with all times in CLUES2, should be measured in generations.
+**--ancientHaps** The input file of ancient haplotype likelihoods as described below. You can supply any combination of a **--times** file, an **--ancientSamps** file, and/or an **--ancientHaps** file. The times in this file, as with all times in CLUES2, should be measured in generations.
 
 **--popFreq** The modern derived allele frequency.
 
@@ -236,7 +236,7 @@ The file Times would be
 
 You read this file into CLUES2 with the --times argument, as when using only modern data. CLUES2 then determines whether ancient samples are being used and correctly parses the input file into the appropriate tree structure.
 
-Ancient Genotype Samples: These input files look like the following file. The first column is the sampling times of the ancient samples (given in generations). The second column is the log genotype probability of 0/0 (homozygous ancestral). The third column is the log genotype probability of 0/1 (which is to say 1|0 or 0|1). The fourth column is the log genotype probability of 1/1 (homozygous derived). For example, the first row of the following file means that an individual was sampled 16.45 generations ago and we are 100% certain has a 0/0 genotype. The second row of the following file means that an individual was sampled 170.6 generations ago to which we assign a probability of 0.105 of being 0/0, a probability 0.878 of being 0/1, and a probability of 0.017 of being 1/1. Uncertainty in genotype calls of ancient data can be caused by imputation. The data should be sorted in increasing order by sampling time.
+Ancient Genotype Samples: These input files look like the following file. The first column is the sampling times of the ancient samples (given in generations). The second column is the log genotype likelihood of 0/0 (homozygous ancestral). The third column is the log genotype likelihood of 0/1 (which is to say 1|0 or 0|1). The fourth column is the log genotype likelihood of 1/1 (homozygous derived). For example, the first row of the following file means that an individual was sampled 16.45 generations ago and we are 100% certain has a 0/0 genotype. The second row of the following file means that an individual was sampled 170.6 generations ago to which we assign a likelihood of 0.105 of being 0/0, a likelihood 0.878 of being 0/1, and a likelihood of 0.017 of being 1/1. The data should be sorted in increasing order by sampling time.
 
 ```bash
 16.45 0.0e+00 -inf -inf
@@ -249,7 +249,7 @@ Ancient Genotype Samples: These input files look like the following file. The fi
 500.0 0.0 -inf -inf
 ```
 
-Ancient Haplotype Samples: These input files look like the following file. The first column is the sampling times of the ancient samples (given in generations). The second column is the log genotype probability of the ancestral allele. The third column is the log genotype probability of the derived allele. For example, the first row of the following file means that a haplotype was sampled 16.45 generations ago and we are 100% certain that the allele at the SNP of interest was ancestral. The second row of the following file means that an individual was sampled 190.05 generations ago to which we assign a probability of 0.1 of being ancestral and a probability 0.9 of being derived. Uncertainty in genotype calls of ancient data can be caused by imputation. The data should be sorted in increasing order by sampling time.
+Ancient Haplotype Samples: These input files look like the following file. The first column is the sampling times of the ancient samples (given in generations). The second column is the log genotype likelihood of the ancestral allele. The third column is the log genotype likelihood of the derived allele. For example, the first row of the following file means that a haplotype was sampled 16.45 generations ago and we are 100% certain that the allele at the SNP of interest was ancestral. The second row of the following file means that an individual was sampled 190.05 generations ago to which we assign a likelihood of 0.1 of being ancestral and a likelihood of 0.9 of being derived.   The data should be sorted in increasing order by sampling time.
 
 ```bash
 16.45 0.0e+00 -inf
