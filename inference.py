@@ -113,12 +113,20 @@ def load_data(args):
 	# load ancient samples/genotype likelihoods
 	if args.ancientSamps != None:
 		ancientGLs = np.genfromtxt(args.ancientSamps,delimiter=' ')
+		for i in range(len(ancientGLs)):
+			liksum = ancientGLs[i,1] + ancientGLs[i,2] + ancientGLs[i,3]
+			if liksum < 1.001 and liksum > 0.999:
+				ancientGLs[i, 1:4] = np.log(ancientGLs[i, 1:4] +  np.array([1e-45,1e-45,1e-45]) )
 	else:
 		ancientGLs = np.zeros((0,4))
 
 	# load ancient haploid genotype likelihoods
 	if args.ancientHaps != None:
 		ancientHapGLs = np.genfromtxt(args.ancientHaps,delimiter=' ')
+		for i in range(len(ancientHapGLs)):
+			liksum = ancientHapGLs[i,1] + ancientHapGLs[i,2]
+			if liksum < 1.001 and liksum > 0.999:
+				ancientHapGLs[i, 1:3] = np.log(ancientHapGLs[i, 1:3] +  np.array([1e-45,1e-45]) )
 	else:
 		ancientHapGLs = np.zeros((0,3))
 
