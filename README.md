@@ -261,7 +261,7 @@ Ancient Haplotype Samples: These input files look like the following file. The f
 Note that we also allow the genotype likelihoods to be specified in normal (non-log) probabilities as well. This is to say that using the following 2 files are equivalent to using the previous 2 files. 
 
 ```bash
-16.45 1 0 1
+16.45 1 0 0
 170.6 0.105 0.878 0.017
 190.05 0.455 0.531 0.013
 213 0 0 1
