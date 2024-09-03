@@ -101,7 +101,7 @@ $ python PATH/inference.py
 
 **--ancientHaps** The input file of ancient haplotype likelihoods as described below. You can supply any combination of a **--times** file, an **--ancientSamps** file, and/or an **--ancientHaps** file. The times in this file, as with all times in CLUES2, should be measured in generations.
 
-**--popFreq** The modern derived allele frequency.
+**--popFreq** The modern derived allele frequency. Must be strictly between 0 and 1.
 
 **--N** The effective population size (Ne). This is the HAPLOID effective population size, denoting the number of haplotypes in a given population, NOT the number of diploid individuals. 100 diploid humans corresponds to an N value of 200. Either this or a coal file must be supplied, but not both.
 
