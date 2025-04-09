@@ -113,6 +113,8 @@ $ python PATH/inference.py
 
 **--timeBins** (optional) A list of epoch breakpoints, sorted in increasing order. These, along with 0 and tCutoff, give the endpoints of the disjoint time intervals in which independent selection coefficients will be inferred. For example, if --timeBins 200 300 is used, 3 separate selection coefficients will be inferred, for each of the intervals [0,200), [200,300), and [300,tCutoff). If this argument is not supplied, one selection coefficient will be inferred for the interval [0,tCutoff). The youngest breakpoint must be greater than 0 and the oldest breakpoint must be less than tCutoff.
 
+**--CI** (optional) A list of confidence intervals of selection coefficients to infer. For example, if --CI 0.95 is used, the 95% confidence intervals for the selection coefficients in each epoch will be produced. If  --CI 0.75  0.95  is used, 75% and 95% confidence intervals for the selection coefficients in each epoch will be produced.  If this argument is not supplied, no output file with confidence intervals will be generated.
+
 **--out** The prefix of the output files.
 
 **--noAlleleTraj** If this flag is used, the inferred allele trajectory will not be estimated. This saves considerable computational time as we do not need to run the Monte Carlo integration and the backward algorithm. Only the inference file will be produced, not the freqs or post files.
