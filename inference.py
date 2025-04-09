@@ -515,14 +515,14 @@ if __name__ == "__main__":
 			ciprint = "Epoch\t"
 			ciindex = 0
 			for tempci in args.CI:
-				ciprint = ciprint + str(int(round(tempci*100))) +"%_low\t" + str(int(round(tempci*100))) +"%_high\t"
+				ciprint = ciprint + str(int(round(tempci*100))) +"%_lower\t" + str(int(round(tempci*100))) +"%_upper\t"
 			ciprint = ciprint[:-1] + "\n"
 			for epochnumber in range(int(len(ConfidenceIntervals)/ (2*len(args.CI) )  )):
 				ciprint = ciprint + str(epochnumber + 1) + "\t"
 				for _ in range(len(args.CI) ):
-					ciprint = ciprint + str(ConfidenceIntervals[ciindex]) + "\t"
+					ciprint = ciprint + '%.5f'%(ConfidenceIntervals[ciindex]) + "\t"
 					ciindex = ciindex + 1
-					ciprint = ciprint + str(ConfidenceIntervals[ciindex]) + "\t"
+					ciprint = ciprint + '%.5f'%(ConfidenceIntervals[ciindex]) + "\t"
 					ciindex = ciindex + 1
 				ciprint = ciprint[:-1] + "\n"
 			f_ci = open(args.out+"_CI.txt", "w+")
