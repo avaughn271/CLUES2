@@ -144,6 +144,22 @@ where selection MLEs are listed to the immediate right of the epoch start and en
 
 ***out_post.txt*** A file containing **df** lines, with each one containing **tCutoff** comma separated probabilities. The j'th column of the i'th row contains the probability of the derived allele being at frequency freqs[i] at j generations before the present, where freqs represent the frequencies given by the ***out_freqs.txt*** file.  Not produced if the **--noAlleleTraj**  flag is used. 
 
+***out_CI.txt*** A file containing, for each epoch and confidence interval specified, the lower and upper bounds of the confidence interval for the selection coefficient. Not produced if the **--CI**  argument is not used.
+
+For example, the file could look like 
+```bash
+Epoch	60%_lower	60%_upper	95%_lower	95%_upper
+1	0.02620	0.02871	0.02277	0.03214
+```
+or 
+```bash
+Epoch	95%_lower	95%_upper
+1	0.01108	0.05292
+2	0.00353	0.04855
+3	0.01088	0.03773
+```
+
+
 ## (3) Plot Inferred Derived Allele Trajectory.
 
 ```bash
