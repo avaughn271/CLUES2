@@ -23,6 +23,7 @@ def parse_args():
 
 	parser.add_argument('--tCutoff',type=float,default=None)
 	parser.add_argument('--timeBins',type=str,default=None, nargs='+')
+	parser.add_argument('--CI',type=float,default=None, nargs='+')
 	parser.add_argument('--sMax',type=float,default=0.1)
 	parser.add_argument('--df',type=int,default=450)
 	parser.add_argument('--noAlleleTraj', default=False, action='store_true', help='whether to compute the posterior allele frequency trajectory or not.')
@@ -430,7 +431,9 @@ if __name__ == "__main__":
 	f.close()
 	functionvals.close()
 
-	if not args.noAlleleTraj:
+	ConfidenceIntervals = []
+
+	if not args.noAlleleTraj or args.CI is not None:
 		file1 = open(args.out+"_tempfile.txt", 'r')
 		Lines = file1.readlines()
 		Xvals = []
@@ -459,6 +462,11 @@ if __name__ == "__main__":
 			variatess = []
 			for iiiv in variatessold:
 				variatess.append([iiiv])
+			if args.CI is not None:
+				for ci in args.CI:
+					ConfidenceIntervals.append(norm.ppf( (1 - float(ci))/2.0 , loc=muu, scale=standard_dev)[0])
+					ConfidenceIntervals.append(norm.ppf(1 -  (1 - float(ci))/2.0 , loc=muu, scale=standard_dev)[0])
+
 		else:
 			S0 =[0.0] * (round((len(Xvals[0])*len(Xvals[0])+len(Xvals[0]))/2)  )
 			for innn in range(len(Xvals[0]) ):
@@ -478,8 +486,6 @@ if __name__ == "__main__":
 				if iggi > 0.2 or iggi < -0.2:
 					print("Poor fit of normal distribution to data. Unreliable results follow.")
 
-			#print("mu2: ", muu)
-			#print("sd2: ", res)
 			standard_dev = res
 			numdimensions=  len(muu)
 
@@ -499,13 +505,36 @@ if __name__ == "__main__":
 				variatess = multivariate_normal.rvs(mean=muu, cov=covarmat, size = numdimensions * 10)
 			else:
 				variatess = multivariate_normal.rvs(mean=muu, cov=covarmat, size = args.integration_points)
-
-		# infer trajectory @ MLE of selection parameter
-		post = np.exp(traj_wrapper(variatess[0],timeBins,Ne,h,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
-		for v in range(1,len(variatess)):
-			post = post + np.exp(traj_wrapper(variatess[v],timeBins,Ne,h,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
-		post = post / np.sum(post,axis=0)
-		np.savetxt(args.out+"_freqs.txt", freqs, delimiter=",")
-		np.savetxt(args.out+"_post.txt", post, delimiter=",")
+			
+			for tempporaryindex in range(len(muu)):
+				if args.CI is not None:
+					for ci in args.CI:
+						ConfidenceIntervals.append(norm.ppf((1 - float(ci))/2.0, loc=muu[tempporaryindex], scale=covarmat[tempporaryindex,tempporaryindex]**0.5))
+						ConfidenceIntervals.append(norm.ppf(1 - (1 - float(ci))/2.0, loc=muu[tempporaryindex], scale=covarmat[tempporaryindex,tempporaryindex]**0.5))
+		if args.CI is not None:
+			ciprint = "Epoch\t"
+			ciindex = 0
+			for tempci in args.CI:
+				ciprint = ciprint + str(int(round(tempci*100))) +"%_low\t" + str(int(round(tempci*100))) +"%_high\t"
+			ciprint = ciprint[:-1] + "\n"
+			for epochnumber in range(int(len(ConfidenceIntervals)/ (2*len(args.CI) )  )):
+				ciprint = ciprint + str(epochnumber + 1) + "\t"
+				for _ in range(len(args.CI) ):
+					ciprint = ciprint + str(ConfidenceIntervals[ciindex]) + "\t"
+					ciindex = ciindex + 1
+					ciprint = ciprint + str(ConfidenceIntervals[ciindex]) + "\t"
+					ciindex = ciindex + 1
+				ciprint = ciprint[:-1] + "\n"
+			f_ci = open(args.out+"_CI.txt", "w+")
+			f_ci.writelines(ciprint)
+			f_ci.close()
+		if not args.noAlleleTraj:
+			# infer trajectory @ MLE of selection parameter
+			post = np.exp(traj_wrapper(variatess[0],timeBins,Ne,h,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
+			for v in range(1,len(variatess)):
+				post = post + np.exp(traj_wrapper(variatess[v],timeBins,Ne,h,freqs,times,logfreqs,log1minusfreqs,z_bins,z_logcdf,z_logsf,ancientGLs,ancientHapGLs,epochs,noCoals,currFreq,sMax,derSampledTimes,ancSampledTimes,Weights))
+			post = post / np.sum(post,axis=0)
+			np.savetxt(args.out+"_freqs.txt", freqs, delimiter=",")
+			np.savetxt(args.out+"_post.txt", post, delimiter=",")
 	if os.path.exists(args.out+"_tempfile.txt"):
 		os.remove(args.out+"_tempfile.txt")
